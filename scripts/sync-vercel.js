@@ -137,10 +137,15 @@ async function main() {
     console.error("Set VERCEL_TOKEN to a Vercel API token (e.g. from vercel.com/account/tokens)");
     process.exit(1);
   }
+  // Safe CI debug: never log the token value
+  console.log(`VERCEL_TOKEN set: yes, length=${token.length}`);
 
   const config = loadConfig();
   let teamId = process.env.VERCEL_TEAM_ID || config.vercel?.teamId;
   if (teamId === "" || !teamId || String(teamId).startsWith("$")) teamId = undefined;
+  if (process.env.VERCEL_TEAM_ID !== undefined) {
+    console.log(`VERCEL_TEAM_ID from env: "${process.env.VERCEL_TEAM_ID}" → using teamId: ${teamId ?? "personal"}`);
+  }
   const docsRepo = config.docsRepo;
   const projects = loadProjects(config);
   const shouldLinkRepo = config.vercel?.linkDocsRepo !== false && docsRepo?.projectId;
