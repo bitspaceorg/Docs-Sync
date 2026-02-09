@@ -64,9 +64,9 @@ async function createDeployment(token, teamId, projectName, gitSource) {
 }
 
 async function main() {
-  const token = process.env.VERCEL_TOKEN;
+  const token = process.env.VERCEL_API_TOKEN || process.env.VERCEL_TOKEN;
   if (!token) {
-    console.error("Set VERCEL_TOKEN");
+    console.error("Set VERCEL_API_TOKEN or VERCEL_TOKEN");
     process.exit(1);
   }
 

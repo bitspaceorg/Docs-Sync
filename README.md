@@ -17,7 +17,7 @@ One GitLab **docs repo** → many **Vercel projects** (one per `projects/*.yaml`
 
 ## Secrets
 
-`VERCEL_TOKEN` (required). Optional: `VERCEL_TEAM_ID`, `GODADDY_API_KEY`, `GODADDY_API_SECRET`.
+`VERCEL_TOKEN` or `VERCEL_API_TOKEN` (required; use `VERCEL_API_TOKEN` in CI to avoid .env overwriting). Optional: `VERCEL_TEAM_ID`, `GODADDY_API_KEY`, `GODADDY_API_SECRET`.
 
 ## Trigger from docs repo (fallback)
 
@@ -56,7 +56,7 @@ Must accept build-time env: `PROJECT_NAME`, `PROJECT_COLOR`, `DOCS_SOURCE_URL` a
 ## Testing end-to-end
 
 1. **Prerequisites**
-   - Vercel account; [create token](https://vercel.com/account/tokens) → set `VERCEL_TOKEN` locally or in GitLab CI.
+   - Vercel account; [create token](https://vercel.com/account/tokens) → set `VERCEL_TOKEN` locally or `VERCEL_API_TOKEN` in GitLab CI.
    - GitLab docs repo; note its **numeric project ID** (project → Settings → General).
    - (Optional) GoDaddy domain + [API key/secret](https://developer.godaddy.com) for CNAMEs.
 

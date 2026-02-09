@@ -132,31 +132,32 @@ async function getGitLabIntegrationConfigId(token, teamId) {
   return gitlab?.id ?? null;
 }
 
-const SENSITIVE_KEYS = new Set(["VERCEL_TOKEN", "GODADDY_API_KEY", "GODADDY_API_SECRET"]);
+const SENSITIVE_KEYS = new Set(["VERCEL_TOKEN", "VERCEL_API_TOKEN", "GODADDY_API_KEY", "GODADDY_API_SECRET"]);
 
 function debugPrintEnv() {
-  console.log("--- env (sensitive values redacted) ---");
-  const keys = Object.keys(process.env).filter((k) => k.startsWith("VERCEL_") || k.startsWith("GODADDY_") || k.startsWith("DOCS_") || k === "CI" || k === "GITLAB_CI");
-  keys.sort();
-  for (const k of keys) {
-    const v = process.env[k];
-      console.log(`${k}=${JSON.stringify(v)}`);
-  }
-  console.log("--- end env ---");
+  // console.log("--- env (sensitive values redacted) ---");
+  // const keys = Object.keys(process.env).filter((k) => k.startsWith("VERCEL_") || k.startsWith("GODADDY_") || k.startsWith("DOCS_") || k === "CI" || k === "GITLAB_CI");
+  // keys.sort();
+  // for (const k of keys) {
+    // const v = process.env[k];
+    //   console.log(`${k}=${JSON.stringify(v)}`);
+  // }
+  // console.log("--- end env ---");
 }
 
 async function main() {
   debugPrintEnv();
 
-  const token = process.env.VERCEL_TOKEN;
+  // Prefer VERCEL_API_TOKEN (e.g. in CI) so .env VERCEL_TOKEN cannot overwrite it
+  const token = process.env.VERCEL_API_TOKEN || process.env.VERCEL_TOKEN;
   if (!token) {
-    console.error("Set VERCEL_TOKEN to a Vercel API token (e.g. from vercel.com/account/tokens)");
+    console.error("Set VERCEL_API_TOKEN or VERCEL_TOKEN to a Vercel API token (e.g. from vercel.com/account/tokens)");
     process.exit(1);
   }
-  // Safe CI debug: never log the token value
-  console.log(`VERCEL_TOKEN set: yes, length=${token.length}`);
+  const tokenSource = process.env.VERCEL_API_TOKEN ? "VERCEL_API_TOKEN" : "VERCEL_TOKEN";
+  console.log(`${tokenSource} set: yes, length=${token.length}`);
   if (token.length < 20 || token.startsWith("$")) {
-    console.error("VERCEL_TOKEN is wrong: paste the real token (vcp_...) in GitLab Settings → CI/CD → Variables as the Value, not the text $VERCEL_TOKEN.");
+    console.error(`Token (${tokenSource}) is wrong: use the real token (vcp_...) as the variable Value in GitLab CI/CD.`);
     process.exit(1);
   }
 
