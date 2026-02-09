@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /** Create/update Vercel project per projects/*.yaml (env, domain, link docs repo). Needs VERCEL_TOKEN. */
 
-import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config({ override: false }); // CI vars win; .env only fills in unset vars
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -154,8 +155,8 @@ async function main() {
   }
   // Safe CI debug: never log the token value
   console.log(`VERCEL_TOKEN set: yes, length=${token.length}`);
-  if (token.length < 20) {
-    console.error("VERCEL_TOKEN is too short - in GitLab check Settings → CI/CD → Variables: use one VERCEL_TOKEN (project or group) with the full token; remove any other VERCEL_TOKEN that might override it.");
+  if (token.length < 20 || token.startsWith("$")) {
+    console.error("VERCEL_TOKEN is wrong: paste the real token (vcp_...) in GitLab Settings → CI/CD → Variables as the Value, not the text $VERCEL_TOKEN.");
     process.exit(1);
   }
 
