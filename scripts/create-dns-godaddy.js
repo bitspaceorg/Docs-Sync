@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /** CNAME each project subdomain → dns.vercelCnameTarget in GoDaddy. Needs GODADDY_API_KEY, GODADDY_API_SECRET. */
 
+import "dotenv/config";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";

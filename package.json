@@ -10,6 +10,7 @@
     "dns:godaddy": "node scripts/create-dns-godaddy.js"
   },
   "dependencies": {
+    "dotenv": "^16.4.5",
     "yaml": "^2.6.1"
   }
 }

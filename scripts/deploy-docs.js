@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /** Deploy docs repo (DOCS_REF, DOCS_SHA) to every Vercel project via gitSource API. Needs VERCEL_TOKEN, docsRepo.projectId. */
 
+import "dotenv/config";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";

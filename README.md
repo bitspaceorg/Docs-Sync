@@ -7,7 +7,7 @@ One GitLab **docs repo** → many **Vercel projects** (one per `projects/*.yaml`
 ## Config
 
 - **`config.yaml`**: `baseDomain`, `docsRepo.repository`, `docsRepo.projectId` (GitLab numeric ID), `docsRepo.productionBranch`, `vercel.teamId` (optional), `vercel.linkDocsRepo` (default true), `dns.domain`, `dns.vercelCnameTarget` (e.g. `cname.vercel-dns.com`).
-- **`projects/<id>.yaml`**: `project_name`, `project_color`, `project_docsSource`, optional `project_subdomain`, optional `project_env`. Subdomain = custom domain (`subdomain.baseDomain`).
+- **`projects/<id>.yaml`**: `project_name`, `project_color`, `project_docs_source` (or `project_docsSource`), optional `project_subdomain`, optional `project_env`. Subdomain = custom domain (`subdomain.baseDomain`).
 
 ## CI
 
@@ -45,9 +45,11 @@ DOCS_REF=main DOCS_SHA=<sha> npm run deploy-docs
 npm run dns:godaddy
 ```
 
+If Node isn’t installed globally, use nix: `nix-shell -p nodejs_22 --run "npm ci && npm run sync-vercel"` (or any of the commands above).
+
 ## Docs repo
 
-Must accept build-time env: `PROJECT_NAME`, `PROJECT_COLOR`, `DOCS_SOURCE_URL` (and `VITE_*` if Vite). sync-vercel sets these. `npm run build`; output `dist/` or `out/` (Next.js).
+Must accept build-time env: `PROJECT_NAME`, `PROJECT_COLOR`, `DOCS_SOURCE_URL` and `NEXT_PUBLIC_*` (Next.js). sync-vercel sets these. `npm run build`; output `dist/` or `out/` (Next.js).
 
 ---
 
@@ -60,7 +62,7 @@ Must accept build-time env: `PROJECT_NAME`, `PROJECT_COLOR`, `DOCS_SOURCE_URL` (
 
 2. **Configure**
    - In `config.yaml`: set `baseDomain`, `docsRepo.repository`, `docsRepo.projectId`, and (if using GoDaddy) `dns.domain`, `dns.vercelCnameTarget`.
-   - Ensure at least one project exists, e.g. `projects/project1.yaml` with `project_name`, `project_color`, `project_docsSource` (and optional `project_subdomain`).
+   - Ensure at least one project exists, e.g. `projects/project1.yaml` with `project_name`, `project_color`, `project_docs_source` (and optional `project_subdomain`).
 
 3. **Validate**
    ```bash

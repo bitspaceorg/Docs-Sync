@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /** Create/update Vercel project per projects/*.yaml (env, domain, link docs repo). Needs VERCEL_TOKEN. */
 
+import "dotenv/config";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -26,13 +27,14 @@ function loadProjects(config) {
     const data = parse(raw);
     const subdomain = data.project_subdomain ?? id;
     const fullDomain = `${subdomain}.${config.baseDomain}`;
+    const docsSource = data.project_docs_source ?? data.project_docsSource ?? "";
     const env = {
       PROJECT_NAME: data.project_name,
       PROJECT_COLOR: data.project_color ?? "",
-      DOCS_SOURCE_URL: data.project_docsSource ?? "",
-      VITE_PROJECT_NAME: data.project_name,
-      VITE_PROJECT_COLOR: data.project_color ?? "",
-      VITE_DOCS_SOURCE_URL: data.project_docsSource ?? "",
+      DOCS_SOURCE_URL: docsSource,
+      NEXT_PUBLIC_PROJECT_NAME: data.project_name,
+      NEXT_PUBLIC_PROJECT_COLOR: data.project_color ?? "",
+      NEXT_PUBLIC_DOCS_SOURCE_URL: docsSource,
       ...(data.project_env || {}),
     };
     out.push({ id, file, name: data.project_name, fullDomain, env });
