@@ -131,7 +131,22 @@ async function getGitLabIntegrationConfigId(token, teamId) {
   return gitlab?.id ?? null;
 }
 
+const SENSITIVE_KEYS = new Set(["VERCEL_TOKEN", "GODADDY_API_KEY", "GODADDY_API_SECRET"]);
+
+function debugPrintEnv() {
+  console.log("--- env (sensitive values redacted) ---");
+  const keys = Object.keys(process.env).filter((k) => k.startsWith("VERCEL_") || k.startsWith("GODADDY_") || k.startsWith("DOCS_") || k === "CI" || k === "GITLAB_CI");
+  keys.sort();
+  for (const k of keys) {
+    const v = process.env[k];
+      console.log(`${k}=${JSON.stringify(v)}`);
+  }
+  console.log("--- end env ---");
+}
+
 async function main() {
+  debugPrintEnv();
+
   const token = process.env.VERCEL_TOKEN;
   if (!token) {
     console.error("Set VERCEL_TOKEN to a Vercel API token (e.g. from vercel.com/account/tokens)");
@@ -139,6 +154,10 @@ async function main() {
   }
   // Safe CI debug: never log the token value
   console.log(`VERCEL_TOKEN set: yes, length=${token.length}`);
+  if (token.length < 20) {
+    console.error("VERCEL_TOKEN is too short - in GitLab check Settings → CI/CD → Variables: use one VERCEL_TOKEN (project or group) with the full token; remove any other VERCEL_TOKEN that might override it.");
+    process.exit(1);
+  }
 
   const config = loadConfig();
   let teamId = process.env.VERCEL_TEAM_ID || config.vercel?.teamId;
