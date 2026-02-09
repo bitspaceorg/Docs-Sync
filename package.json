@@ -1,0 +1,15 @@
+{
+  "name": "docs-deployment",
+  "private": true,
+  "description": "Deployment config and sync for multi-project docs (Vercel)",
+  "type": "module",
+  "scripts": {
+    "validate": "node scripts/validate-projects.js",
+    "sync-vercel": "node scripts/sync-vercel.js",
+    "deploy-docs": "node scripts/deploy-docs.js",
+    "dns:godaddy": "node scripts/create-dns-godaddy.js"
+  },
+  "dependencies": {
+    "yaml": "^2.6.1"
+  }
+}

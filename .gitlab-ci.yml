@@ -1,0 +1,56 @@
+stages:
+  - sync
+  - dns
+
+default:
+  image: node:20-bookworm
+
+sync-vercel:
+  stage: sync
+  before_script:
+    - npm ci
+  script:
+    - npm run validate
+    - node scripts/sync-vercel.js
+  variables:
+    VERCEL_TOKEN: $VERCEL_TOKEN
+    VERCEL_TEAM_ID: $VERCEL_TEAM_ID
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - config.yaml
+        - "projects/**"
+      when: on_success
+    - when: manual
+
+deploy-docs:
+  stage: sync
+  before_script:
+    - npm ci
+  script:
+    - npm run validate
+    - node scripts/deploy-docs.js
+  variables:
+    VERCEL_TOKEN: $VERCEL_TOKEN
+    VERCEL_TEAM_ID: $VERCEL_TEAM_ID
+    DOCS_REF: $DOCS_REF
+    DOCS_SHA: $DOCS_SHA
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "trigger" && $DOCS_SHA != null && $DOCS_SHA != ""
+      when: always
+
+dns:godaddy:
+  stage: dns
+  script:
+    - npm ci
+    - npm run dns:godaddy
+  variables:
+    GODADDY_API_KEY: $GODADDY_API_KEY
+    GODADDY_API_SECRET: $GODADDY_API_SECRET
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - config.yaml
+        - "projects/**"
+      when: on_success
+    - when: manual

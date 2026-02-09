@@ -1,0 +1,15 @@
+baseDomain: bitspace.org.in
+
+docsRepo:
+  repository: bitspaceorg/website/docs/sample-docs
+  projectId: 79358492 
+  productionBranch: main
+
+vercel:
+  # teamId: team_xxxx
+  # linkDocsRepo: true
+
+dns:
+  provider: godaddy
+  domain: bitspace.org.in
+  vercelCnameTarget: cname.vercel-dns.com
