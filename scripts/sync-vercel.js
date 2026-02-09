@@ -137,7 +137,8 @@ async function main() {
   }
 
   const config = loadConfig();
-  const teamId = process.env.VERCEL_TEAM_ID || config.vercel?.teamId;
+  let teamId = process.env.VERCEL_TEAM_ID || config.vercel?.teamId;
+  if (teamId === "" || !teamId || String(teamId).startsWith("$")) teamId = undefined;
   const docsRepo = config.docsRepo;
   const projects = loadProjects(config);
   const shouldLinkRepo = config.vercel?.linkDocsRepo !== false && docsRepo?.projectId;
