@@ -17,6 +17,8 @@ sync-vercel:
     VERCEL_TOKEN: $VERCEL_TOKEN
     VERCEL_TEAM_ID: $VERCEL_TEAM_ID
   rules:
+    - if: $CI_PIPELINE_SOURCE == "trigger"
+      when: never
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - config.yaml
@@ -58,6 +60,8 @@ dns:cloudflare:
   variables:
     CLOUDFLARE_API_TOKEN: $CLOUDFLARE_API_TOKEN
   rules:
+    - if: $CI_PIPELINE_SOURCE == "trigger"
+      when: never
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - config.yaml

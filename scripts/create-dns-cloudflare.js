@@ -95,6 +95,7 @@ async function main() {
     process.exit(0);
   }
   let token = process.env.CLOUDFLARE_API_TOKEN;
+  console.log("token", token);
   if (token != null) token = String(token).trim();
   if (!token || token.startsWith("$")) {
     console.error("Set CLOUDFLARE_API_TOKEN in GitLab CI/CD Variables to the real token value (not $CLOUDFLARE_API_TOKEN).");
