@@ -84,6 +84,58 @@ async function addProjectDomain(token, teamId, idOrName, domainName) {
   return await api("POST", `/v10/projects/${encodeURIComponent(idOrName)}/domains`, { name: domainName }, token, teamId);
 }
 
+/** GET project domain (includes verification challenges if not verified). */
+async function getProjectDomain(token, teamId, idOrName, domainName) {
+  try {
+    return await api("GET", `/v9/projects/${encodeURIComponent(idOrName)}/domains/${encodeURIComponent(domainName)}`, null, token, teamId);
+  } catch (e) {
+    if (e.message.includes("404")) return null;
+    throw e;
+  }
+}
+
+/** Trigger domain verification (after TXT record is in place). */
+async function verifyProjectDomain(token, teamId, idOrName, domainName) {
+  return await api("POST", `/v9/projects/${encodeURIComponent(idOrName)}/domains/${encodeURIComponent(domainName)}/verify`, null, token, teamId);
+}
+
+const CF_API = "https://api.cloudflare.com/client/v4";
+
+/** Add or replace TXT record at Cloudflare (for Vercel domain verification). */
+async function cloudflarePutTXT(zoneId, token, name, value) {
+  const listRes = await fetch(`${CF_API}/zones/${zoneId}/dns_records?type=TXT&name=${encodeURIComponent(name)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const listData = await listRes.json();
+  const existing = listData.result || [];
+  const payload = { type: "TXT", name, content: value, ttl: 600 };
+  if (existing.length > 0) {
+    const put = await fetch(`${CF_API}/zones/${zoneId}/dns_records/${existing[0].id}`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!put.ok) throw new Error(`Cloudflare TXT ${put.status}: ${await put.text()}`);
+    return;
+  }
+  const post = await fetch(`${CF_API}/zones/${zoneId}/dns_records`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!post.ok) throw new Error(`Cloudflare TXT ${post.status}: ${await post.text()}`);
+}
+
+async function getCloudflareZoneId(domain, token) {
+  const res = await fetch(`${CF_API}/zones?name=${encodeURIComponent(domain)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json();
+  const zone = data.result?.[0];
+  if (!zone?.id) throw new Error(`Cloudflare zone not found: ${domain}`);
+  return zone.id;
+}
+
 async function setProjectEnv(token, teamId, idOrName, env) {
   const target = ["production", "preview"];
   for (const [key, value] of Object.entries(env)) {
@@ -132,11 +184,11 @@ async function getGitLabIntegrationConfigId(token, teamId) {
   return gitlab?.id ?? null;
 }
 
-const SENSITIVE_KEYS = new Set(["VERCEL_TOKEN", "VERCEL_API_TOKEN", "GODADDY_API_KEY", "GODADDY_API_SECRET"]);
+const SENSITIVE_KEYS = new Set(["VERCEL_TOKEN", "VERCEL_API_TOKEN", "CLOUDFLARE_API_TOKEN"]);
 
 function debugPrintEnv() {
   // console.log("--- env (sensitive values redacted) ---");
-  // const keys = Object.keys(process.env).filter((k) => k.startsWith("VERCEL_") || k.startsWith("GODADDY_") || k.startsWith("DOCS_") || k === "CI" || k === "GITLAB_CI");
+  // const keys = Object.keys(process.env).filter((k) => k.startsWith("VERCEL_") || k.startsWith("CLOUDFLARE_") || k.startsWith("DOCS_") || k === "CI" || k === "GITLAB_CI");
   // keys.sort();
   // for (const k of keys) {
     // const v = process.env[k];
@@ -201,6 +253,34 @@ async function main() {
       await addProjectDomain(token, teamId, proj.id, proj.fullDomain);
     } else {
       console.log(`  Domain ${proj.fullDomain} already added.`);
+    }
+
+    // If domain needs TXT verification (e.g. linked to another account), add TXT via DNS provider and verify
+    const domainInfo = await getProjectDomain(token, teamId, proj.id, proj.fullDomain);
+    if (domainInfo && domainInfo.verified === false && Array.isArray(domainInfo.verification) && domainInfo.verification.length > 0) {
+      const txtChallenge = domainInfo.verification.find((v) => (v.type || "").toUpperCase() === "TXT");
+      if (txtChallenge && txtChallenge.domain && txtChallenge.value) {
+        const apex = config.baseDomain || config.dns?.domain;
+        const recordName = apex && String(txtChallenge.domain).toLowerCase().endsWith("." + apex.toLowerCase())
+          ? txtChallenge.domain.slice(0, -(apex.length + 1)).replace(/\.$/, "")
+          : txtChallenge.domain.split(".")[0] || "_vercel";
+        const txtFqdn = apex ? `${recordName}.${apex}` : txtChallenge.domain;
+        if (config.dns?.provider === "cloudflare" && apex && process.env.CLOUDFLARE_API_TOKEN) {
+          const cfToken = process.env.CLOUDFLARE_API_TOKEN;
+          const zoneId = config.dns.zoneId || (await getCloudflareZoneId(apex, cfToken));
+          console.log(`  Adding TXT ${txtFqdn} for verification...`);
+          await cloudflarePutTXT(zoneId, cfToken, txtFqdn, txtChallenge.value);
+          await new Promise((r) => setTimeout(r, 8000));
+          const after = await verifyProjectDomain(token, teamId, proj.id, proj.fullDomain);
+          if (after?.verified) {
+            console.log(`  Domain verified.`);
+          } else {
+            console.warn(`  Verification may still be pending; check Vercel dashboard or re-run sync later.`);
+          }
+        } else {
+          console.warn(`  Domain needs TXT at ${txtChallenge.domain} = ${txtChallenge.value}. Set CLOUDFLARE_API_TOKEN and dns.provider=cloudflare to auto-verify.`);
+        }
+      }
     }
 
     if (shouldLinkRepo && gitLabConfigId && project.id) {

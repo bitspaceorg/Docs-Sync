@@ -7,7 +7,7 @@
     "validate": "node scripts/validate-projects.js",
     "sync-vercel": "node scripts/sync-vercel.js",
     "deploy-docs": "node scripts/deploy-docs.js",
-    "dns:godaddy": "node scripts/create-dns-godaddy.js"
+    "dns": "node scripts/create-dns-cloudflare.js"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

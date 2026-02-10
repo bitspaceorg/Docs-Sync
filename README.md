@@ -2,7 +2,7 @@
 
 One GitLab **docs repo** → many **Vercel projects** (one per `projects/*.yaml`). Each has its own env and URL (e.g. `project1.example.com`). Push to docs repo → all linked projects redeploy (sync-vercel links the repo when GitLab is connected to Vercel; else use deploy-docs).
 
-**You do:** Add `projects/<id>.yaml`; set `VERCEL_TOKEN` (and optional `GODADDY_*`) once; push to docs repo. **Automated:** Vercel project + env + domain + CNAMEs; repo linking when GitLab is in Vercel.
+**You do:** Add `projects/<id>.yaml`; set `VERCEL_TOKEN` (and optional `CLOUDFLARE_API_TOKEN`) once; push to docs repo. **Automated:** Vercel project + env + domain + CNAMEs; repo linking when GitLab is in Vercel.
 
 ## Config
 
@@ -11,13 +11,13 @@ One GitLab **docs repo** → many **Vercel projects** (one per `projects/*.yaml`
 
 ## CI
 
-- **sync-vercel**: Create/update Vercel project per yaml (env, domain, link docs repo). On config/projects change or manual. Needs `VERCEL_TOKEN`.
+- **sync-vercel**: Create/update Vercel project per yaml (env, domain, link docs repo). If a domain needs TXT verification (e.g. linked to another Vercel account), sync-vercel can add the `_vercel` TXT via Cloudflare and verify automatically when `dns.provider=cloudflare` and `CLOUDFLARE_API_TOKEN` are set. Needs `VERCEL_TOKEN`.
 - **deploy-docs**: Trigger with `DOCS_REF`, `DOCS_SHA` → deploy that commit to every Vercel project. Use if repo isn’t linked.
-- **dns:godaddy**: CNAME each subdomain → Vercel. On config/projects change or manual. Needs `GODADDY_API_KEY`, `GODADDY_API_SECRET`.
+- **dns**: CNAME each subdomain → Vercel (Cloudflare). On config/projects change or manual. Needs `CLOUDFLARE_API_TOKEN`.
 
 ## Secrets
 
-`VERCEL_TOKEN` or `VERCEL_API_TOKEN` (required; use `VERCEL_API_TOKEN` in CI to avoid .env overwriting). Optional: `VERCEL_TEAM_ID`, `GODADDY_API_KEY`, `GODADDY_API_SECRET`.
+`VERCEL_TOKEN` or `VERCEL_API_TOKEN` (required; use `VERCEL_API_TOKEN` in CI to avoid .env overwriting). Optional: `VERCEL_TEAM_ID`, `CLOUDFLARE_API_TOKEN` (for DNS and TXT verification).
 
 ## Trigger from docs repo (fallback)
 
@@ -42,7 +42,7 @@ Set `DEPLOYMENT_TRIGGER_TOKEN`, `DEPLOYMENT_PROJECT_ID` in the docs repo. Add a 
 npm run validate
 npm run sync-vercel
 DOCS_REF=main DOCS_SHA=<sha> npm run deploy-docs
-npm run dns:godaddy
+npm run dns
 ```
 
 If Node isn’t installed globally, use nix: `nix-shell -p nodejs_22 --run "npm ci && npm run sync-vercel"` (or any of the commands above).
@@ -58,10 +58,10 @@ Must accept build-time env: `PROJECT_NAME`, `PROJECT_COLOR`, `DOCS_SOURCE_URL` a
 1. **Prerequisites**
    - Vercel account; [create token](https://vercel.com/account/tokens) → set `VERCEL_TOKEN` locally or `VERCEL_API_TOKEN` in GitLab CI.
    - GitLab docs repo; note its **numeric project ID** (project → Settings → General).
-   - (Optional) GoDaddy domain + [API key/secret](https://developer.godaddy.com) for CNAMEs.
+   - (Optional) Cloudflare zone (domain transferred or DNS there) + [API token](https://dash.cloudflare.com/profile/api-tokens) with Zone:DNS:Edit for CNAMEs.
 
 2. **Configure**
-   - In `config.yaml`: set `baseDomain`, `docsRepo.repository`, `docsRepo.projectId`, and (if using GoDaddy) `dns.domain`, `dns.vercelCnameTarget`.
+   - In `config.yaml`: set `baseDomain`, `docsRepo.repository`, `docsRepo.projectId`, and (if using Cloudflare) `dns.provider: cloudflare`, `dns.domain`, `dns.vercelCnameTarget`.
    - Ensure at least one project exists, e.g. `projects/project1.yaml` with `project_name`, `project_color`, `project_docs_source` (and optional `project_subdomain`).
 
 3. **Validate**
@@ -79,12 +79,12 @@ Must accept build-time env: `PROJECT_NAME`, `PROJECT_COLOR`, `DOCS_SOURCE_URL` a
    - If you see “Could not link docs repo”, connect **GitLab** in Vercel (Settings → Integrations) and run `npm run sync-vercel` again, or use deploy-docs for deploys.
 
 5. **DNS (optional)**
-   If using GoDaddy:
+   If using Cloudflare:
    ```bash
-   export GODADDY_API_KEY=... GODADDY_API_SECRET=...
-   npm run dns:godaddy
+   export CLOUDFLARE_API_TOKEN=...
+   npm run dns
    ```
-   Confirm CNAMEs in GoDaddy (e.g. `project1` → `cname.vercel-dns.com`).
+   Confirm CNAMEs in Cloudflare (e.g. `project1.<baseDomain>` → `cname.vercel-dns.com`).
 
 6. **Deploy docs**
    - **If repo is linked in Vercel:** Push a change to the docs repo → each linked Vercel project should deploy automatically. Check Vercel Deployments.
@@ -95,4 +95,4 @@ Must accept build-time env: `PROJECT_NAME`, `PROJECT_COLOR`, `DOCS_SOURCE_URL` a
    Verify each project’s deployment in Vercel.
 
 7. **CI**
-   Push `config.yaml` or a file under `projects/` to `main` on this repo. Pipeline should run **sync-vercel** and (if configured) **dns:godaddy**. Trigger the pipeline with `DOCS_REF`, `DOCS_SHA` from the docs repo to test **deploy-docs**.
+   Push `config.yaml` or a file under `projects/` to `main` on this repo. Pipeline should run **sync-vercel** and (if configured) **dns** (Cloudflare). Trigger the pipeline with `DOCS_REF`, `DOCS_SHA` from the docs repo to test **deploy-docs**.

@@ -39,14 +39,13 @@ deploy-docs:
     - if: $CI_PIPELINE_SOURCE == "trigger" && $DOCS_SHA != null && $DOCS_SHA != ""
       when: always
 
-dns:godaddy:
+dns:cloudflare:
   stage: dns
   script:
     - npm ci
-    - npm run dns:godaddy
+    - npm run dns
   variables:
-    GODADDY_API_KEY: $GODADDY_API_KEY
-    GODADDY_API_SECRET: $GODADDY_API_SECRET
+    CLOUDFLARE_API_TOKEN: $CLOUDFLARE_API_TOKEN
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:

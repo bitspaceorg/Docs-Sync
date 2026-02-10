@@ -10,6 +10,7 @@ vercel:
   # linkDocsRepo: true
 
 dns:
-  provider: godaddy
+  provider: cloudflare
   domain: bitspace.org.in
   vercelCnameTarget: cname.vercel-dns.com
+  # zoneId: optional; if unset, resolved from domain via API
