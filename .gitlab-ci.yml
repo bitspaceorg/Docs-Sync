@@ -29,6 +29,10 @@ deploy-docs:
     - npm ci
   script:
     - npm run validate
+    - |
+      if [ -z "$DOCS_SHA" ]; then
+        eval "$(node scripts/get-latest-docs-ref-sha.js)"
+      fi
     - node scripts/deploy-docs.js
   variables:
     VERCEL_TOKEN: $VERCEL_TOKEN
@@ -38,6 +42,7 @@ deploy-docs:
   rules:
     - if: $CI_PIPELINE_SOURCE == "trigger" && $DOCS_SHA != null && $DOCS_SHA != ""
       when: always
+    - when: on_success
 
 dns:cloudflare:
   stage: dns

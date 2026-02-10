@@ -95,4 +95,4 @@ Must accept build-time env: `PROJECT_NAME`, `PROJECT_COLOR`, `DOCS_SOURCE_URL` a
    Verify each project’s deployment in Vercel.
 
 7. **CI**
-   Push `config.yaml` or a file under `projects/` to `main` on this repo. Pipeline should run **sync-vercel** and (if configured) **dns** (Cloudflare). Trigger the pipeline with `DOCS_REF`, `DOCS_SHA` from the docs repo to test **deploy-docs**.
+   Push `config.yaml` or a file under `projects/` to `main` on this repo. Pipeline should run **sync-vercel** and (if configured) **dns** (Cloudflare). **deploy-docs** runs manually; if you don’t set `DOCS_REF`/`DOCS_SHA`, the job fetches the latest commit from the docs repo (GitLab API) and deploys that. For a private docs repo in another project, add a CI variable with API access (e.g. `GITLAB_TOKEN`) or ensure the job can access the docs project.
