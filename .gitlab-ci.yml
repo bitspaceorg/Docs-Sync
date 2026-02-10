@@ -13,12 +13,6 @@ sync-vercel:
   script:
     - npm run validate
     - node scripts/sync-vercel.js
-  variables:
-    DOCS_VERCEL_TOKEN: $DOCS_VERCEL_TOKEN
-    DOCS_VERCEL_API_TOKEN: $DOCS_VERCEL_API_TOKEN
-    DOCS_VERCEL_TEAM_ID: $DOCS_VERCEL_TEAM_ID
-    VERCEL_TOKEN: $VERCEL_TOKEN
-    VERCEL_TEAM_ID: $VERCEL_TEAM_ID
   rules:
     - if: $CI_PIPELINE_SOURCE == "trigger"
       when: never
@@ -40,14 +34,6 @@ deploy-docs:
         eval "$(node scripts/get-latest-docs-ref-sha.js)"
       fi
     - node scripts/deploy-docs.js
-  variables:
-    DOCS_VERCEL_TOKEN: $DOCS_VERCEL_TOKEN
-    DOCS_VERCEL_API_TOKEN: $DOCS_VERCEL_API_TOKEN
-    DOCS_VERCEL_TEAM_ID: $DOCS_VERCEL_TEAM_ID
-    VERCEL_TOKEN: $VERCEL_TOKEN
-    VERCEL_TEAM_ID: $VERCEL_TEAM_ID
-    DOCS_REF: $DOCS_REF
-    DOCS_SHA: $DOCS_SHA
   rules:
     - if: $CI_PIPELINE_SOURCE == "trigger" && $DOCS_SHA != null && $DOCS_SHA != ""
       when: always
@@ -63,9 +49,6 @@ dns:cloudflare:
   script:
     - npm ci
     - npm run dns
-  variables:
-    DOCS_CLOUDFLARE_API_TOKEN: $DOCS_CLOUDFLARE_API_TOKEN
-    CLOUDFLARE_API_TOKEN: $CLOUDFLARE_API_TOKEN
   rules:
     - if: $CI_PIPELINE_SOURCE == "trigger"
       when: never
