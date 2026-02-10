@@ -28,14 +28,13 @@ function loadProjects(config) {
 }
 
 async function cf(method, pathname, body, token) {
+  const t = String(token || "").trim();
   const url = pathname.startsWith("http") ? pathname : `${CF_API}${pathname}`;
-  const opts = {
-    method,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-  };
+  const headers = { Authorization: `Bearer ${t}` };
+  if (body) {
+    headers["Content-Type"] = "application/json";
+  }
+  const opts = { method, headers };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(url, opts);
   const data = await res.json().catch(() => ({}));
@@ -95,9 +94,10 @@ async function main() {
     console.log("Skip: dns.provider is not cloudflare or dns.domain missing.");
     process.exit(0);
   }
-  const token = process.env.CLOUDFLARE_API_TOKEN;
-  if (!token) {
-    console.error("Set CLOUDFLARE_API_TOKEN (Cloudflare API token with Zone:DNS:Edit).");
+  let token = process.env.CLOUDFLARE_API_TOKEN;
+  if (token != null) token = String(token).trim();
+  if (!token || token.startsWith("$")) {
+    console.error("Set CLOUDFLARE_API_TOKEN in GitLab CI/CD Variables to the real token value (not $CLOUDFLARE_API_TOKEN).");
     process.exit(1);
   }
   const target = dns.vercelCnameTarget || "cname.vercel-dns.com";
