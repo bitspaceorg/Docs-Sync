@@ -1,6 +1,7 @@
 stages:
   - sync
   - dns
+  - deploy
 
 default:
   image: node:20-bookworm
@@ -24,7 +25,7 @@ sync-vercel:
     - when: manual
 
 deploy-docs:
-  stage: sync
+  stage: deploy
   before_script:
     - npm ci
   script:
@@ -42,7 +43,12 @@ deploy-docs:
   rules:
     - if: $CI_PIPELINE_SOURCE == "trigger" && $DOCS_SHA != null && $DOCS_SHA != ""
       when: always
-    - when: on_success
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - config.yaml
+        - "projects/**"
+      when: on_success
+    - when: manual
 
 dns:cloudflare:
   stage: dns

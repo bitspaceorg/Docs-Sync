@@ -2,7 +2,7 @@
 
 One GitLab **docs repo** → many **Vercel projects** (one per `projects/*.yaml`). Each has its own env and URL (e.g. `project1.example.com`). Push to docs repo → all linked projects redeploy (sync-vercel links the repo when GitLab is connected to Vercel; else use deploy-docs).
 
-**You do:** Add `projects/<id>.yaml`; set `VERCEL_TOKEN` (and optional `CLOUDFLARE_API_TOKEN`) once; push to docs repo. **Automated:** Vercel project + env + domain + CNAMEs; repo linking when GitLab is in Vercel.
+**You do:** Add `projects/<id>.yaml` in **this repo**; set `VERCEL_TOKEN` (and optional `CLOUDFLARE_API_TOKEN`) once; push. **Automated:** Vercel project + env + domain + CNAMEs; repo linking when GitLab is in Vercel. The **docs repo** only holds content; **this repo** defines which projects exist. Initial creation is here; the docs-repo trigger only **updates** (redeploys) those same projects when docs change.
 
 ## Config
 
@@ -19,9 +19,9 @@ One GitLab **docs repo** → many **Vercel projects** (one per `projects/*.yaml`
 
 `VERCEL_TOKEN` or `VERCEL_API_TOKEN` (required; use `VERCEL_API_TOKEN` in CI to avoid .env overwriting). Optional: `VERCEL_TEAM_ID`, `CLOUDFLARE_API_TOKEN` (for DNS and TXT verification).
 
-## Trigger from docs repo (fallback)
+## Trigger from docs repo (updates only)
 
-If you don’t link the repo in Vercel, trigger this repo on push:
+When the **docs repo** is updated, trigger this repo so deploy-docs redeploys the **existing** projects (no new projects are created—only those in `projects/*.yaml` get the new commit). In the docs repo’s CI:
 
 ```yaml
 trigger-deployment:
@@ -34,7 +34,7 @@ trigger-deployment:
         "https://gitlab.com/api/v4/projects/${DEPLOYMENT_PROJECT_ID}/trigger/pipeline"
 ```
 
-Set `DEPLOYMENT_TRIGGER_TOKEN`, `DEPLOYMENT_PROJECT_ID` in the docs repo. Add a pipeline trigger in this repo and copy the token.
+Set `DEPLOYMENT_TRIGGER_TOKEN`, `DEPLOYMENT_PROJECT_ID` in the docs repo (trigger token from this repo’s Settings → CI/CD → Pipeline triggers). This only updates deployments; initial project creation is done in this repo by adding `projects/<id>.yaml` and pushing.
 
 ## Commands
 
