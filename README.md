@@ -2,7 +2,7 @@
 
 One GitLab **docs repo** → many **Vercel projects** (one per `projects/*.yaml`). Each has its own env and URL (e.g. `project1.example.com`). Push to docs repo → all linked projects redeploy (sync-vercel links the repo when GitLab is connected to Vercel; else use deploy-docs).
 
-**You do:** Add `projects/<id>.yaml` in **this repo**; set `VERCEL_TOKEN` (and optional `CLOUDFLARE_API_TOKEN`) once; push. **Automated:** Vercel project + env + domain + CNAMEs; repo linking when GitLab is in Vercel. The **docs repo** only holds content; **this repo** defines which projects exist. Initial creation is here; the docs-repo trigger only **updates** (redeploys) those same projects when docs change.
+**You do:** Add `projects/<id>.yaml` in **this repo**; set `DOCS_VERCEL_TOKEN` (and optional `DOCS_CLOUDFLARE_API_TOKEN`) once; push. **Automated:** Vercel project + env + domain + CNAMEs; repo linking when GitLab is in Vercel. The **docs repo** only holds content; **this repo** defines which projects exist. Initial creation is here; the docs-repo trigger only **updates** (redeploys) those same projects when docs change.
 
 ## Config
 
@@ -11,13 +11,13 @@ One GitLab **docs repo** → many **Vercel projects** (one per `projects/*.yaml`
 
 ## CI
 
-- **sync-vercel**: Create/update Vercel project per yaml (env, domain, link docs repo). If a domain needs TXT verification (e.g. linked to another Vercel account), sync-vercel can add the `_vercel` TXT via Cloudflare and verify automatically when `dns.provider=cloudflare` and `CLOUDFLARE_API_TOKEN` are set. Needs `VERCEL_TOKEN`.
+- **sync-vercel**: Create/update Vercel project per yaml (env, domain, link docs repo). If a domain needs TXT verification (e.g. linked to another Vercel account), sync-vercel can add the `_vercel` TXT via Cloudflare and verify automatically when `dns.provider=cloudflare` and `DOCS_CLOUDFLARE_API_TOKEN` are set. Needs `DOCS_VERCEL_TOKEN`.
 - **deploy-docs**: Trigger with `DOCS_REF`, `DOCS_SHA` → deploy that commit to every Vercel project. Use if repo isn’t linked.
-- **dns**: CNAME each subdomain → Vercel (Cloudflare). On config/projects change or manual. Needs `CLOUDFLARE_API_TOKEN`.
+- **dns**: CNAME each subdomain → Vercel (Cloudflare). On config/projects change or manual. Needs `DOCS_CLOUDFLARE_API_TOKEN`.
 
 ## Secrets
 
-`VERCEL_TOKEN` or `VERCEL_API_TOKEN` (required; use `VERCEL_API_TOKEN` in CI to avoid .env overwriting). Optional: `VERCEL_TEAM_ID`, `CLOUDFLARE_API_TOKEN` (for DNS and TXT verification).
+`DOCS_VERCEL_TOKEN` or `DOCS_VERCEL_API_TOKEN` (required; old names `VERCEL_TOKEN` / `VERCEL_API_TOKEN` still work). Optional: `DOCS_VERCEL_TEAM_ID`, `DOCS_CLOUDFLARE_API_TOKEN` (for DNS and TXT verification; old names accepted).
 
 ## Trigger from docs repo (updates only)
 
@@ -28,13 +28,13 @@ trigger-deployment:
   stage: .post
   script:
     - |
-      curl -X POST -F token=${DEPLOYMENT_TRIGGER_TOKEN} \
+      curl -X POST -F token=${DOCS_DEPLOYMENT_TRIGGER_TOKEN} \
         -F "variables[DOCS_REF]=${CI_COMMIT_REF_NAME}" \
         -F "variables[DOCS_SHA]=${CI_COMMIT_SHA}" \
-        "https://gitlab.com/api/v4/projects/${DEPLOYMENT_PROJECT_ID}/trigger/pipeline"
+        "https://gitlab.com/api/v4/projects/${DOCS_DEPLOYMENT_PROJECT_ID}/trigger/pipeline"
 ```
 
-Set `DEPLOYMENT_TRIGGER_TOKEN`, `DEPLOYMENT_PROJECT_ID` in the docs repo (trigger token from this repo’s Settings → CI/CD → Pipeline triggers). This only updates deployments; initial project creation is done in this repo by adding `projects/<id>.yaml` and pushing.
+Set `DOCS_DEPLOYMENT_TRIGGER_TOKEN`, `DOCS_DEPLOYMENT_PROJECT_ID` in the docs repo (trigger token from this repo’s Settings → CI/CD → Pipeline triggers). This only updates deployments; initial project creation is done in this repo by adding `projects/<id>.yaml` and pushing.
 
 ## Commands
 
@@ -56,7 +56,7 @@ Must accept build-time env: `PROJECT_NAME`, `PROJECT_COLOR`, `DOCS_SOURCE_URL` a
 ## Testing end-to-end
 
 1. **Prerequisites**
-   - Vercel account; [create token](https://vercel.com/account/tokens) → set `VERCEL_TOKEN` locally or `VERCEL_API_TOKEN` in GitLab CI.
+   - Vercel account; [create token](https://vercel.com/account/tokens) → set `DOCS_VERCEL_TOKEN` locally or `DOCS_VERCEL_API_TOKEN` in GitLab CI.
    - GitLab docs repo; note its **numeric project ID** (project → Settings → General).
    - (Optional) Cloudflare zone (domain transferred or DNS there) + [API token](https://dash.cloudflare.com/profile/api-tokens) with Zone:DNS:Edit for CNAMEs.
 
@@ -72,7 +72,7 @@ Must accept build-time env: `PROJECT_NAME`, `PROJECT_COLOR`, `DOCS_SOURCE_URL` a
 
 4. **Sync Vercel (local)**
    ```bash
-   export VERCEL_TOKEN=your_token
+   export DOCS_VERCEL_TOKEN=your_token
    npm run sync-vercel
    ```
    - Check Vercel dashboard: new projects (e.g. `project1`) with env vars and custom domain `project1.<baseDomain>`.
@@ -81,7 +81,7 @@ Must accept build-time env: `PROJECT_NAME`, `PROJECT_COLOR`, `DOCS_SOURCE_URL` a
 5. **DNS (optional)**
    If using Cloudflare:
    ```bash
-   export CLOUDFLARE_API_TOKEN=...
+   export DOCS_CLOUDFLARE_API_TOKEN=...
    npm run dns
    ```
    Confirm CNAMEs in Cloudflare (e.g. `project1.<baseDomain>` → `cname.vercel-dns.com`).

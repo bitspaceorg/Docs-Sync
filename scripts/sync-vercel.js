@@ -184,7 +184,7 @@ async function getGitLabIntegrationConfigId(token, teamId) {
   return gitlab?.id ?? null;
 }
 
-const SENSITIVE_KEYS = new Set(["VERCEL_TOKEN", "VERCEL_API_TOKEN", "CLOUDFLARE_API_TOKEN"]);
+const SENSITIVE_KEYS = new Set(["VERCEL_TOKEN", "VERCEL_API_TOKEN", "DOCS_VERCEL_TOKEN", "DOCS_VERCEL_API_TOKEN", "CLOUDFLARE_API_TOKEN", "DOCS_CLOUDFLARE_API_TOKEN"]);
 
 function debugPrintEnv() {
   // console.log("--- env (sensitive values redacted) ---");
@@ -200,24 +200,23 @@ function debugPrintEnv() {
 async function main() {
   debugPrintEnv();
 
-  // Prefer VERCEL_API_TOKEN (e.g. in CI) so .env VERCEL_TOKEN cannot overwrite it
-  const token = process.env.VERCEL_API_TOKEN || process.env.VERCEL_TOKEN;
+  const token = process.env.DOCS_VERCEL_API_TOKEN || process.env.DOCS_VERCEL_TOKEN || process.env.VERCEL_API_TOKEN || process.env.VERCEL_TOKEN;
   if (!token) {
-    console.error("Set VERCEL_API_TOKEN or VERCEL_TOKEN to a Vercel API token (e.g. from vercel.com/account/tokens)");
+    console.error("Set DOCS_VERCEL_TOKEN or DOCS_VERCEL_API_TOKEN (or VERCEL_TOKEN / VERCEL_API_TOKEN) to a Vercel API token.");
     process.exit(1);
   }
-  const tokenSource = process.env.VERCEL_API_TOKEN ? "VERCEL_API_TOKEN" : "VERCEL_TOKEN";
+  const tokenSource = process.env.DOCS_VERCEL_API_TOKEN || process.env.DOCS_VERCEL_TOKEN ? "DOCS_VERCEL_*" : "VERCEL_*";
   console.log(`${tokenSource} set: yes, length=${token.length}`);
   if (token.length < 20 || token.startsWith("$")) {
-    console.error(`Token (${tokenSource}) is wrong: use the real token (vcp_...) as the variable Value in GitLab CI/CD.`);
+    console.error("Token is wrong: use the real token (vcp_...) as the variable Value in GitLab CI/CD.");
     process.exit(1);
   }
 
   const config = loadConfig();
-  let teamId = process.env.VERCEL_TEAM_ID || config.vercel?.teamId;
+  let teamId = process.env.DOCS_VERCEL_TEAM_ID || process.env.VERCEL_TEAM_ID || config.vercel?.teamId;
   if (teamId === "" || !teamId || String(teamId).startsWith("$")) teamId = undefined;
-  if (process.env.VERCEL_TEAM_ID !== undefined) {
-    console.log(`VERCEL_TEAM_ID from env: "${process.env.VERCEL_TEAM_ID}" → using teamId: ${teamId ?? "personal"}`);
+  if (process.env.DOCS_VERCEL_TEAM_ID !== undefined || process.env.VERCEL_TEAM_ID !== undefined) {
+    console.log(`Team ID from env → using teamId: ${teamId ?? "personal"}`);
   }
   const docsRepo = config.docsRepo;
   const projects = loadProjects(config);
@@ -265,8 +264,8 @@ async function main() {
           ? txtChallenge.domain.slice(0, -(apex.length + 1)).replace(/\.$/, "")
           : txtChallenge.domain.split(".")[0] || "_vercel";
         const txtFqdn = apex ? `${recordName}.${apex}` : txtChallenge.domain;
-        if (config.dns?.provider === "cloudflare" && apex && process.env.CLOUDFLARE_API_TOKEN) {
-          const cfToken = process.env.CLOUDFLARE_API_TOKEN;
+        const cfToken = process.env.DOCS_CLOUDFLARE_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
+        if (config.dns?.provider === "cloudflare" && apex && cfToken) {
           const zoneId = config.dns.zoneId || (await getCloudflareZoneId(apex, cfToken));
           console.log(`  Adding TXT ${txtFqdn} for verification...`);
           await cloudflarePutTXT(zoneId, cfToken, txtFqdn, txtChallenge.value);
@@ -278,7 +277,7 @@ async function main() {
             console.warn(`  Verification may still be pending; check Vercel dashboard or re-run sync later.`);
           }
         } else {
-          console.warn(`  Domain needs TXT at ${txtChallenge.domain} = ${txtChallenge.value}. Set CLOUDFLARE_API_TOKEN and dns.provider=cloudflare to auto-verify.`);
+          console.warn(`  Domain needs TXT at ${txtChallenge.domain} = ${txtChallenge.value}. Set DOCS_CLOUDFLARE_API_TOKEN (or CLOUDFLARE_API_TOKEN) and dns.provider=cloudflare to auto-verify.`);
         }
       }
     }

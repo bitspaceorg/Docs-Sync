@@ -64,9 +64,9 @@ async function createDeployment(token, teamId, projectName, gitSource) {
 }
 
 async function main() {
-  const token = process.env.VERCEL_API_TOKEN || process.env.VERCEL_TOKEN;
+  const token = process.env.DOCS_VERCEL_API_TOKEN || process.env.DOCS_VERCEL_TOKEN || process.env.VERCEL_API_TOKEN || process.env.VERCEL_TOKEN;
   if (!token) {
-    console.error("Set VERCEL_API_TOKEN or VERCEL_TOKEN");
+    console.error("Set DOCS_VERCEL_TOKEN or DOCS_VERCEL_API_TOKEN (or VERCEL_TOKEN / VERCEL_API_TOKEN)");
     process.exit(1);
   }
 
@@ -84,7 +84,7 @@ async function main() {
     process.exit(1);
   }
 
-  const teamId = process.env.VERCEL_TEAM_ID || config.vercel?.teamId;
+  const teamId = process.env.DOCS_VERCEL_TEAM_ID || process.env.VERCEL_TEAM_ID || config.vercel?.teamId;
   const projectIds = loadProjectIds(config);
 
   console.log(`Deploying docs repo (ref=${ref}, sha=${sha.slice(0, 7)}) to ${projectIds.length} project(s)...`);

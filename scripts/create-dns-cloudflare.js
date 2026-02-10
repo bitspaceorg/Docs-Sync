@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** CNAME each project subdomain → dns.vercelCnameTarget in Cloudflare. Needs CLOUDFLARE_API_TOKEN. */
+/** CNAME each project subdomain → dns.vercelCnameTarget in Cloudflare. Needs DOCS_CLOUDFLARE_API_TOKEN (or CLOUDFLARE_API_TOKEN). */
 
 import dotenv from "dotenv";
 dotenv.config({ override: false });
@@ -94,11 +94,10 @@ async function main() {
     console.log("Skip: dns.provider is not cloudflare or dns.domain missing.");
     process.exit(0);
   }
-  let token = process.env.CLOUDFLARE_API_TOKEN;
-  console.log("token", token);
+  let token = process.env.DOCS_CLOUDFLARE_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
   if (token != null) token = String(token).trim();
   if (!token || token.startsWith("$")) {
-    console.error("Set CLOUDFLARE_API_TOKEN in GitLab CI/CD Variables to the real token value (not $CLOUDFLARE_API_TOKEN).");
+    console.error("Set DOCS_CLOUDFLARE_API_TOKEN (or CLOUDFLARE_API_TOKEN) in GitLab CI/CD Variables to the real token value.");
     process.exit(1);
   }
   const target = dns.vercelCnameTarget || "cname.vercel-dns.com";
