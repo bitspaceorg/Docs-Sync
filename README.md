@@ -29,10 +29,13 @@ trigger-deployment:
   script:
     - |
       curl -X POST -F token=${DOCS_DEPLOYMENT_TRIGGER_TOKEN} \
+        -F ref=main \
         -F "variables[DOCS_REF]=${CI_COMMIT_REF_NAME}" \
         -F "variables[DOCS_SHA]=${CI_COMMIT_SHA}" \
         "https://gitlab.com/api/v4/projects/${DOCS_DEPLOYMENT_PROJECT_ID}/trigger/pipeline"
 ```
+
+**Important:** `ref` is required by GitLab’s trigger API—it is the branch to run in the **docs-deployment** repo (e.g. `main`), not the docs repo. Use the default branch of this repo.
 
 Set `DOCS_DEPLOYMENT_TRIGGER_TOKEN`, `DOCS_DEPLOYMENT_PROJECT_ID` in the docs repo (trigger token from this repo’s Settings → CI/CD → Pipeline triggers). This only updates deployments; initial project creation is done in this repo by adding `projects/<id>.yaml` and pushing.
 
