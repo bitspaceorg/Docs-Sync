@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-/** Create/update Vercel project per projects/*.yaml (env, domain, link docs repo). Needs VERCEL_TOKEN. */
+/** Sync Vercel projects from projects/*.yaml (env, domain, link repo). Needs DOCS_VERCEL_TOKEN. */
 
 import dotenv from "dotenv";
-dotenv.config({ override: false }); // CI vars win; .env only fills in unset vars
+dotenv.config({ override: false });
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -28,29 +28,25 @@ function loadProjects(config) {
     const data = parse(raw);
     const subdomain = data.project_subdomain ?? id;
     const fullDomain = `${subdomain}.${config.baseDomain}`;
-    const docsSource = data.project_docs_source ?? data.project_docsSource ?? "";
+    const homeUrl = data.project_home_url ?? `https://${fullDomain}`;
     const env = {
-      // Uppercase (existing)
-      PROJECT_NAME: data.project_name,
-      PROJECT_COLOR: data.project_color ?? "",
-      PROJECT_SUBDOMAIN: subdomain,
-      DOCS_SOURCE_URL: docsSource,
-      NEXT_PUBLIC_PROJECT_NAME: data.project_name,
-      NEXT_PUBLIC_PROJECT_COLOR: data.project_color ?? "",
-      NEXT_PUBLIC_PROJECT_SUBDOMAIN: subdomain,
-      NEXT_PUBLIC_DOCS_SOURCE_URL: docsSource,
-      // Same names as local .env so hosted app sees them
-      project_name: data.project_name,
-      project_subdomain: subdomain,
-      project_color: data.project_color ?? "",
-      project_docs_source: docsSource,
-      NEXT_PUBLIC_project_name: data.project_name,
-      NEXT_PUBLIC_project_subdomain: subdomain,
-      NEXT_PUBLIC_project_color: data.project_color ?? "",
-      NEXT_PUBLIC_project_docs_source: docsSource,
+      PROJECT_NAME: data.project_name ?? id,
+      PROJECT_HOME_URL: homeUrl,
+      ACCENT_COLOR: data.accent_color ?? "",
+      TINTED_ACCENT_COLOR: data.tinted_accent_color ?? "",
+      FOREGROUND_COLOR: data.foreground_color ?? "",
+      DATA_URL: data.data_url ?? "",
+      NEXT_PUBLIC_PROJECT_NAME: data.project_name ?? id,
+      NEXT_PUBLIC_PROJECT_HOME_URL: homeUrl,
+      NEXT_PUBLIC_ACCENT_COLOR: data.accent_color ?? "",
+      NEXT_PUBLIC_TINTED_ACCENT_COLOR: data.tinted_accent_color ?? "",
+      NEXT_PUBLIC_FOREGROUND_COLOR: data.foreground_color ?? "",
+      NEXT_PUBLIC_DATA_URL: data.data_url ?? "",
+      DOCS_DEPLOYMENT_MANAGED: "1",
+      DOCS_DEPLOYMENT_FULL_DOMAIN: fullDomain,
       ...(data.project_env || {}),
     };
-    out.push({ id, file, name: data.project_name, fullDomain, env });
+    out.push({ id, file, name: data.project_name ?? id, fullDomain, env });
   }
   return out;
 }
@@ -85,6 +81,28 @@ async function getProject(token, teamId, idOrName) {
 
 async function createProject(token, teamId, name) {
   return await api("POST", "/v11/projects", { name }, token, teamId);
+}
+
+/** List all Vercel projects (paginated; we fetch up to 100). */
+async function listVercelProjects(token, teamId) {
+  const data = await api("GET", "/v10/projects?limit=100", null, token, teamId);
+  return Array.isArray(data) ? data : data?.projects ?? [];
+}
+
+/** Get env vars for a project (keys and values). */
+async function getProjectEnv(token, teamId, idOrName) {
+  try {
+    const data = await api("GET", `/v10/projects/${encodeURIComponent(idOrName)}/env`, null, token, teamId);
+    return Array.isArray(data) ? data : data?.env ?? [];
+  } catch (e) {
+    if (e.message.includes("404")) return [];
+    throw e;
+  }
+}
+
+/** Delete a Vercel project (and all its deployments). */
+async function deleteVercelProject(token, teamId, idOrName) {
+  await api("DELETE", `/v9/projects/${encodeURIComponent(idOrName)}`, null, token, teamId);
 }
 
 async function listProjectDomains(token, teamId, idOrName) {
@@ -148,6 +166,30 @@ async function getCloudflareZoneId(domain, token) {
   return zone.id;
 }
 
+/** List DNS records in a zone (optional type/name filter). */
+async function cloudflareListDns(zoneId, token, opts = {}) {
+  const q = new URLSearchParams(opts).toString();
+  const res = await fetch(`${CF_API}/zones/${zoneId}/dns_records${q ? `?${q}` : ""}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.errors?.[0]?.message || "Cloudflare list DNS failed");
+  return data.result || [];
+}
+
+/** Delete a CNAME record by name (removes first match). */
+async function cloudflareDeleteCNAME(zoneId, token, name) {
+  const records = await cloudflareListDns(zoneId, token, { type: "CNAME", name });
+  if (records.length === 0) return false;
+  const res = await fetch(`${CF_API}/zones/${zoneId}/dns_records/${records[0].id}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.errors?.[0]?.message || "Cloudflare delete DNS failed");
+  return true;
+}
+
 async function setProjectEnv(token, teamId, idOrName, env) {
   const target = ["production", "preview"];
   for (const [key, value] of Object.entries(env)) {
@@ -196,30 +238,13 @@ async function getGitLabIntegrationConfigId(token, teamId) {
   return gitlab?.id ?? null;
 }
 
-const SENSITIVE_KEYS = new Set(["VERCEL_TOKEN", "VERCEL_API_TOKEN", "DOCS_VERCEL_TOKEN", "DOCS_VERCEL_API_TOKEN", "CLOUDFLARE_API_TOKEN", "DOCS_CLOUDFLARE_API_TOKEN"]);
-
-function debugPrintEnv() {
-  // console.log("--- env (sensitive values redacted) ---");
-  // const keys = Object.keys(process.env).filter((k) => k.startsWith("VERCEL_") || k.startsWith("CLOUDFLARE_") || k.startsWith("DOCS_") || k === "CI" || k === "GITLAB_CI");
-  // keys.sort();
-  // for (const k of keys) {
-    // const v = process.env[k];
-    //   console.log(`${k}=${JSON.stringify(v)}`);
-  // }
-  // console.log("--- end env ---");
-}
-
 async function main() {
-  debugPrintEnv();
-
   const token = process.env.DOCS_VERCEL_API_TOKEN || process.env.DOCS_VERCEL_TOKEN || process.env.VERCEL_API_TOKEN || process.env.VERCEL_TOKEN;
   if (!token) {
     console.error("Set DOCS_VERCEL_TOKEN or DOCS_VERCEL_API_TOKEN (or VERCEL_TOKEN / VERCEL_API_TOKEN) to a Vercel API token.");
     process.exit(1);
   }
-  const tokenSource = process.env.DOCS_VERCEL_API_TOKEN || process.env.DOCS_VERCEL_TOKEN ? "DOCS_VERCEL_*" : "VERCEL_*";
-  console.log(`${tokenSource} set: yes, length=${token.length}`);
-  if (token.length < 20 || token.startsWith("$")) {
+  if (token.length < 20 || String(token).startsWith("$")) {
     console.error("Token is wrong: use the real token (vcp_...) as the variable Value in GitLab CI/CD.");
     process.exit(1);
   }
@@ -266,7 +291,6 @@ async function main() {
       console.log(`  Domain ${proj.fullDomain} already added.`);
     }
 
-    // If domain needs TXT verification (e.g. linked to another account), add TXT via DNS provider and verify
     const domainInfo = await getProjectDomain(token, teamId, proj.id, proj.fullDomain);
     if (domainInfo && domainInfo.verified === false && Array.isArray(domainInfo.verification) && domainInfo.verification.length > 0) {
       const txtChallenge = domainInfo.verification.find((v) => (v.type || "").toUpperCase() === "TXT");
@@ -303,6 +327,65 @@ async function main() {
       }
     }
   }
+
+  const currentIds = new Set(projects.map((p) => p.id));
+  const vercelProjects = await listVercelProjects(token, teamId);
+  const candidates = vercelProjects.filter((vp) => !currentIds.has(vp.name));
+  if (candidates.length === 0) {
+    console.log("\nDone.");
+    return;
+  }
+
+  const envFromList = (vp) => Array.isArray(vp.env) && vp.env.length > 0 ? vp.env : null;
+  const getEnv = async (vp) => envFromList(vp) ?? getProjectEnv(token, teamId, vp.name);
+  const envResults = await Promise.all(candidates.map((vp) => getEnv(vp).catch(() => null)));
+
+  const toDelete = [];
+  for (let i = 0; i < candidates.length; i++) {
+    const envList = envResults[i];
+    if (!envList) continue;
+    const managed = envList.find((e) => e.key === "DOCS_DEPLOYMENT_MANAGED");
+    if (!managed) continue;
+    const fullDomainVar = envList.find((e) => e.key === "DOCS_DEPLOYMENT_FULL_DOMAIN");
+    toDelete.push({ vp: candidates[i], fullDomain: fullDomainVar?.value });
+  }
+
+  if (toDelete.length === 0) {
+    console.log("\nDone.");
+    return;
+  }
+
+  const cfToken = process.env.DOCS_CLOUDFLARE_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
+  const dnsConfig = config.dns;
+
+  let zoneId = null;
+  if (dnsConfig?.provider === "cloudflare" && cfToken) {
+    try {
+      zoneId = dnsConfig.zoneId || (await getCloudflareZoneId(dnsConfig.domain, cfToken));
+    } catch (e) {
+      console.warn(`  Cloudflare zone lookup failed: ${e.message}`);
+    }
+  }
+
+  await Promise.all(
+    toDelete.map(async ({ vp, fullDomain }) => {
+      if (zoneId && fullDomain && cfToken) {
+        try {
+          const removed = await cloudflareDeleteCNAME(zoneId, cfToken, fullDomain);
+          if (removed) console.log(`\nRemoved CNAME ${fullDomain} (project ${vp.name} deleted from repo).`);
+        } catch (e) {
+          console.warn(`  Cloudflare: could not remove CNAME for ${fullDomain}: ${e.message}`);
+        }
+      }
+    })
+  );
+
+  await Promise.all(
+    toDelete.map(async ({ vp }) => {
+      await deleteVercelProject(token, teamId, vp.name);
+      console.log(`Deleted Vercel project "${vp.name}" (removed from projects/*.yaml).`);
+    })
+  );
 
   console.log("\nDone.");
 }

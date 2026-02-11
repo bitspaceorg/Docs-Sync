@@ -29,7 +29,8 @@ function validateConfig(config) {
 function validateProject(id, data) {
   const errs = [];
   if (!data.project_name) errs.push(`${id}: project_name is required`);
-  if (!data.project_color && !data.project_env?.PROJECT_COLOR) errs.push(`${id}: project_color or project_env.PROJECT_COLOR is recommended`);
+  if (!data.accent_color && !data.project_env?.ACCENT_COLOR) errs.push(`${id}: accent_color (or project_env.ACCENT_COLOR) is recommended`);
+  if (!data.data_url && !data.project_env?.DATA_URL) errs.push(`${id}: data_url (or project_env.DATA_URL) is recommended`);
   return errs;
 }
 

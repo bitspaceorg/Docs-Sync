@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Output DOCS_REF and DOCS_SHA for the latest commit on the docs repo (from config). Used by CI so deploy-docs doesn't need manual vars. */
+/** Print export DOCS_REF=... DOCS_SHA=... for latest docs commit. Used by CI when DOCS_SHA not set. */
 
 import fs from "fs";
 import path from "path";
@@ -37,9 +37,10 @@ async function main() {
     console.error("No commit found for branch:", branch);
     process.exit(1);
   }
-  // Output for shell: eval $(node scripts/get-latest-docs-ref-sha.js)
-  console.log(`export DOCS_REF=${branch}`);
-  console.log(`export DOCS_SHA=${commit.id}`);
+  // Safe for eval: single-quote and escape any single quotes in value
+  const shEscape = (s) => `'${String(s).replace(/'/g, "'\"'\"'")}'`;
+  console.log(`export DOCS_REF=${shEscape(branch)}`);
+  console.log(`export DOCS_SHA=${shEscape(commit.id)}`);
 }
 
 main().catch((e) => {

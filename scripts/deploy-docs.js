@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-/** Deploy docs repo (DOCS_REF, DOCS_SHA) to every Vercel project via gitSource API. Needs VERCEL_TOKEN, docsRepo.projectId. */
+/** Deploy docs ref/SHA to all Vercel projects. Needs DOCS_VERCEL_TOKEN, docsRepo.projectId, DOCS_SHA. */
 
 import dotenv from "dotenv";
-dotenv.config({ override: false }); // CI vars win; .env only fills in unset vars
+dotenv.config({ override: false });
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** CNAME each project subdomain → dns.vercelCnameTarget in Cloudflare. Needs DOCS_CLOUDFLARE_API_TOKEN (or CLOUDFLARE_API_TOKEN). */
+/** Create/update Cloudflare CNAMEs for each project subdomain. Needs DOCS_CLOUDFLARE_API_TOKEN. */
 
 import dotenv from "dotenv";
 dotenv.config({ override: false });

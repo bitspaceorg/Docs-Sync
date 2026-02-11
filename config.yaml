@@ -1,9 +1,9 @@
 baseDomain: bitspace.org.in
 
 docsRepo:
-  repository: bitspaceorg/website/docs/sample-docs
-  projectId: 79358492 
-  productionBranch: main
+  repository: bitspaceorg/website/docs/our-awesome-doc
+  projectId: 79400481 
+  productionBranch: master
 
 vercel:
   # teamId: team_xxxx

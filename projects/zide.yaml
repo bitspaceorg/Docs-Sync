@@ -1,0 +1,7 @@
+project_name: Zide
+project_subdomain: docs.zide
+project_home_url: https://zide.bitspace.org.in
+accent_color: "#CCFF00"
+tinted_accent_color: "#FBFFEB"
+foreground_color: "#0A0A0A"
+data_url: https://zide-docs-b1188a.gitlab.io/data.json
