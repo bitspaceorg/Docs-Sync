@@ -1,4 +1,4 @@
-# Docs deployment (Vercel)
+# Docs Sync
 
 One docs repo → many Vercel projects (one per `projects/*.yaml`). This repo defines projects and syncs them to Vercel; the docs repo holds content. Push here → Vercel projects + env + domains; push to docs repo (or trigger) → redeploy.
 
@@ -55,8 +55,6 @@ npm run dns
 DOCS_REF=main DOCS_SHA=<sha> npm run deploy-docs
 ```
 
-Without Node: `nix-shell -p nodejs_22 --run "npm ci && npm run sync-vercel"`.
-
 ## Docs app
 
-Expect at build/runtime: `PROJECT_NAME`, `PROJECT_HOME_URL`, `ACCENT_COLOR`, `TINTED_ACCENT_COLOR`, `FOREGROUND_COLOR`, `DATA_URL` (and `NEXT_PUBLIC_*` for client). sync-vercel sets these from project yaml.
+Expect at build/runtime: `PROJECT_NAME`, `PROJECT_HOME_URL`, `ACCENT_COLOR`, `TINTED_ACCENT_COLOR`, `FOREGROUND_COLOR`, `DATA_URL`. sync-vercel sets these from project yaml.

@@ -4,4 +4,4 @@ project_home_url: https://zide.bitspace.org.in
 accent_color: "#CCFF00"
 tinted_accent_color: "#FBFFEB"
 foreground_color: "#0A0A0A"
-data_url: https://gist.githubusercontent.com/RahulNavneeth/ea4c3b6af2b911bc44d77ca19ed0b518/raw/c55df46223a5268d824f16f9dcd022a3e144b441/zide-docs-index.json
+data_url: https://zide-docs-b1188a.gitlab.io/data.json
