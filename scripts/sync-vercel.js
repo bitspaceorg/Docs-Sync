@@ -30,12 +30,24 @@ function loadProjects(config) {
     const fullDomain = `${subdomain}.${config.baseDomain}`;
     const docsSource = data.project_docs_source ?? data.project_docsSource ?? "";
     const env = {
+      // Uppercase (existing)
       PROJECT_NAME: data.project_name,
       PROJECT_COLOR: data.project_color ?? "",
+      PROJECT_SUBDOMAIN: subdomain,
       DOCS_SOURCE_URL: docsSource,
       NEXT_PUBLIC_PROJECT_NAME: data.project_name,
       NEXT_PUBLIC_PROJECT_COLOR: data.project_color ?? "",
+      NEXT_PUBLIC_PROJECT_SUBDOMAIN: subdomain,
       NEXT_PUBLIC_DOCS_SOURCE_URL: docsSource,
+      // Same names as local .env so hosted app sees them
+      project_name: data.project_name,
+      project_subdomain: subdomain,
+      project_color: data.project_color ?? "",
+      project_docs_source: docsSource,
+      NEXT_PUBLIC_project_name: data.project_name,
+      NEXT_PUBLIC_project_subdomain: subdomain,
+      NEXT_PUBLIC_project_color: data.project_color ?? "",
+      NEXT_PUBLIC_project_docs_source: docsSource,
       ...(data.project_env || {}),
     };
     out.push({ id, file, name: data.project_name, fullDomain, env });

@@ -43,10 +43,26 @@ async function api(method, pathname, body, token, teamId) {
   return text ? JSON.parse(text) : null;
 }
 
+/** Resolve short SHA to full 40-char SHA via GitLab API (so Vercel gets full SHA). */
+async function resolveFullSha(projectId, sha, ref) {
+  if (sha.length >= 40) return sha;
+  const token = process.env.CI_JOB_TOKEN || process.env.GITLAB_TOKEN || "";
+  const url = `https://gitlab.com/api/v4/projects/${encodeURIComponent(projectId)}/repository/commits/${encodeURIComponent(sha)}`;
+  const headers = { "Content-Type": "application/json" };
+  if (token) headers["PRIVATE-TOKEN"] = token;
+  const res = await fetch(url, { headers });
+  if (!res.ok) {
+    console.warn(`Could not resolve short SHA via GitLab API (${res.status}); using as-is.`);
+    return sha;
+  }
+  const data = await res.json();
+  return data.id || sha;
+}
+
 async function createDeployment(token, teamId, projectName, gitSource) {
   return await api(
     "POST",
-    "/v13/deployments",
+    "/v13/deployments?skipAutoDetectionConfirmation=1",
     {
       name: projectName,
       project: projectName,
@@ -78,11 +94,12 @@ async function main() {
   }
 
   const ref = process.env.DOCS_REF || docsRepo.productionBranch || "main";
-  const sha = process.env.DOCS_SHA;
+  let sha = (process.env.DOCS_SHA || "").trim();
   if (!sha) {
     console.error("Set DOCS_SHA (commit SHA to deploy). When triggering from docs repo, pass CI_COMMIT_SHA.");
     process.exit(1);
   }
+  sha = await resolveFullSha(docsRepo.projectId, sha, ref);
 
   const teamId = process.env.DOCS_VERCEL_TEAM_ID || process.env.VERCEL_TEAM_ID || config.vercel?.teamId;
   const projectIds = loadProjectIds(config);

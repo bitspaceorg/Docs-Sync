@@ -88,11 +88,11 @@ Must accept build-time env: `PROJECT_NAME`, `PROJECT_COLOR`, `DOCS_SOURCE_URL` a
 
 6. **Deploy docs**
    - **If repo is linked in Vercel:** Push a change to the docs repo → each linked Vercel project should deploy automatically. Check Vercel Deployments.
-   - **If not linked:** Trigger this repo’s pipeline with `DOCS_REF=main` and `DOCS_SHA=<latest_commit_sha>`, or run:
+   - **If not linked:** Trigger this repo’s pipeline with `DOCS_REF=main` and `DOCS_SHA=<full_40_char_sha>`, or run:
      ```bash
      DOCS_REF=main DOCS_SHA=$(git -C /path/to/docs-repo rev-parse HEAD) npm run deploy-docs
      ```
-   Verify each project’s deployment in Vercel.
+   Use the **full** commit SHA (40 chars). If you see *"The provided GitLab repository can't access the commit author"*, the commit author must have access to the Vercel project: connect GitLab in Vercel (Settings → Integrations), ensure the GitLab user who made the commit is linked and has access, or trigger from a commit by a user who has Vercel access.
 
 7. **CI**
    Push `config.yaml` or a file under `projects/` to `main` on this repo. Pipeline should run **sync-vercel** and (if configured) **dns** (Cloudflare). **deploy-docs** runs manually; if you don’t set `DOCS_REF`/`DOCS_SHA`, the job fetches the latest commit from the docs repo (GitLab API) and deploys that. For a private docs repo in another project, add a CI variable with API access (e.g. `GITLAB_TOKEN`) or ensure the job can access the docs project.
