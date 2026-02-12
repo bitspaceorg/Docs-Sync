@@ -11,6 +11,7 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const CACHE_FILE = path.join(ROOT, ".cache", "cron-last-deployed.json");
+const SKIP_REASONS_FILE = path.join(ROOT, ".cache", "cron-skip-reasons.json");
 const OUT_FILE = path.join(ROOT, "public", "index.html");
 
 function ago(iso) {
@@ -66,6 +67,28 @@ const rows =
     </tbody>
   </table>`;
 
+let skipReasons = {};
+try {
+  skipReasons = JSON.parse(fs.readFileSync(SKIP_REASONS_FILE, "utf8"));
+} catch {
+  // none
+}
+const skipEntries = Object.entries(skipReasons).filter(([, r]) => r);
+const skipSection =
+  skipEntries.length === 0
+    ? ""
+    : `
+  <h2>Projects not rebuilding</h2>
+  <p>For these projects, rebuild will not run until the issue is fixed:</p>
+  <table>
+    <thead><tr><th>Project</th><th>Reason</th></tr></thead>
+    <tbody>
+      ${skipEntries
+        .map(([name, reason]) => `<tr><td><code>${escape(name)}</code></td><td>${escape(reason)}</td></tr>`)
+        .join("")}
+    </tbody>
+  </table>`;
+
 const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -85,6 +108,7 @@ const html = `<!DOCTYPE html>
   <h1>Docs Sync – last rebuilt</h1>
   <p>Per-project last rebuild time (from cron:check-data). Schedule: <code>* * * * *</code> on main.</p>
   ${rows}
+  ${skipSection}
 </body>
 </html>
 `;

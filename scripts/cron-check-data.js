@@ -19,6 +19,7 @@ const VERCEL_API = "https://api.vercel.com";
 
 const TIMESTAMPS_FILE = process.env.CRON_TIMESTAMPS_FILE || path.join(ROOT, ".cache", "cron-timestamps.json");
 const LAST_DEPLOYED_FILE = path.join(ROOT, ".cache", "cron-last-deployed.json");
+const SKIP_REASONS_FILE = path.join(ROOT, ".cache", "cron-skip-reasons.json");
 const TIMESTAMP_FIELD = process.env.CRON_TIMESTAMP_FIELD || "timestamp";
 
 function loadConfig() {
@@ -54,6 +55,12 @@ function saveLastDeployed(obj) {
   const dir = path.dirname(LAST_DEPLOYED_FILE);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(LAST_DEPLOYED_FILE, JSON.stringify(obj, null, 2) + "\n", "utf8");
+}
+
+function saveSkipReasons(obj) {
+  const dir = path.dirname(SKIP_REASONS_FILE);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(SKIP_REASONS_FILE, JSON.stringify(obj, null, 2) + "\n", "utf8");
 }
 
 function toMs(value) {
@@ -171,6 +178,7 @@ async function main() {
   const projects = await listVercelProjects(token, teamId);
   const timestamps = loadTimestamps();
   const lastDeployed = loadLastDeployed();
+  const skipReasons = {};
 
   let deployed = 0;
   for (const proj of projects) {
@@ -178,7 +186,10 @@ async function main() {
     const env = envMap(envList);
     if (env.DOCS_DEPLOYMENT_MANAGED !== "1" && env.DOCS_DEPLOYMENT_MANAGED !== "true") continue;
     const dataUrl = env.DATA_URL;
-    if (!dataUrl) continue;
+    if (!dataUrl) {
+      skipReasons[proj.name] = "DATA_URL not set; rebuild will not run.";
+      continue;
+    }
 
     let payload;
     try {
@@ -186,6 +197,7 @@ async function main() {
       if (!res.ok) throw new Error(`${res.status}`);
       payload = await res.json();
     } catch (e) {
+      skipReasons[proj.name] = `Failed to fetch DATA_URL: ${e.message}. Rebuild will not run.`;
       console.warn(`  ${proj.name}: fetch DATA_URL failed: ${e.message}`);
       continue;
     }
@@ -193,6 +205,7 @@ async function main() {
     const raw = payload[TIMESTAMP_FIELD];
     const currentMs = toMs(raw);
     if (currentMs == null) {
+      skipReasons[proj.name] = `Timestamp missing or invalid in DATA_URL response (field "${TIMESTAMP_FIELD}"). Rebuild will not run.`;
       console.warn(`  ${proj.name}: missing or invalid "${TIMESTAMP_FIELD}"`);
       continue;
     }
@@ -213,6 +226,7 @@ async function main() {
           continue;
         }
       } else {
+        skipReasons[proj.name] = "No docsRepo in config; rebuild will not run.";
         console.warn(`  ${proj.name}: no docsRepo in config; skip deploy.`);
         timestamps[key] = currentMs;
         continue;
@@ -224,6 +238,7 @@ async function main() {
 
   saveTimestamps(timestamps);
   saveLastDeployed(lastDeployed);
+  saveSkipReasons(skipReasons);
   console.log(`Done. Deployed ${deployed} project(s).`);
 }
 
