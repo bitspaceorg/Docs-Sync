@@ -279,8 +279,9 @@ async function main() {
       console.log(`  Project exists.`);
     }
 
+    const envToSet = { ...proj.env };
     console.log(`  Setting env vars...`);
-    await setProjectEnv(token, teamId, proj.id, proj.env);
+    await setProjectEnv(token, teamId, proj.id, envToSet);
 
     const domains = await listProjectDomains(token, teamId, proj.id);
     const hasDomain = domains.some((d) => d.name === proj.fullDomain);

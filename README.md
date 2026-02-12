@@ -18,6 +18,10 @@ One docs repo → many Vercel projects (one per `projects/*.yaml`). This repo de
 
   Optional: `project_subdomain` (defaults to file id for domain); `project_env` (extra env key/values).
 
+## Cron: rebuild when DATA_URL timestamp changes
+
+**Global cron:** The **cron:check-data** job (runs on schedule) checks all projects with `DOCS_DEPLOYMENT_MANAGED`, fetches each `DATA_URL`, and triggers a rebuild **only for the project(s)** whose `timestamp` is newer than last run (via Vercel API, latest docs ref/sha from `config.docsRepo`). **Only DOCS_VERCEL_TOKEN required.** Every minute: CI/CD → Schedules → Cron `* * * * *`, branch `main`. Optional: **CRON_TIMESTAMP_FIELD**, **CRON_TIMESTAMPS_FILE**. **GitLab Pages** publishes a status page with last rebuilt per project; see Deployments → Pages.
+
 ## CI jobs
 
 | Job | When | Needs |
@@ -25,6 +29,8 @@ One docs repo → many Vercel projects (one per `projects/*.yaml`). This repo de
 | **sync-vercel** | main, config/projects change (not on trigger) | DOCS_VERCEL_TOKEN |
 | **dns:cloudflare** | main, config/projects change | DOCS_CLOUDFLARE_API_TOKEN |
 | **deploy-docs** | trigger with DOCS_SHA, or main config/projects change, or manual | DOCS_VERCEL_TOKEN, DOCS_SHA (or from get-latest) |
+| **cron:check-data** | pipeline source = **schedule** (e.g. every minute: `* * * * *`) | DOCS_VERCEL_TOKEN |
+| **pages** | main | (publishes `public/` for GitLab Pages – cron docs) |
 
 Removing a `projects/<id>.yaml` and running sync-vercel deletes that Vercel project and its Cloudflare CNAME (if DNS is Cloudflare).
 

@@ -2,6 +2,7 @@ stages:
   - sync
   - dns
   - deploy
+  - cron
 
 default:
   image: node:20-bookworm
@@ -58,3 +59,39 @@ dns:cloudflare:
         - "projects/**"
       when: on_success
     - when: manual
+
+# Run every minute: CI/CD → Schedules → New schedule → Cron: * * * * *
+cron:check-data:
+  stage: cron
+  cache:
+    key: cron-timestamps
+    paths:
+      - .cache/
+  before_script:
+    - npm ci
+  script:
+    - node scripts/cron-check-data.js
+  artifacts:
+    paths:
+      - .cache/
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: on_success
+    - when: never
+
+# GitLab Pages: last-rebuilt status (when schedule ran) or repo public/.
+pages:
+  stage: .post
+  before_script:
+    - npm ci
+  script:
+    - |
+      if [ -f .cache/cron-last-deployed.json ]; then
+        node scripts/generate-cron-status-html.js
+      fi
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_PIPELINE_SOURCE == "schedule"

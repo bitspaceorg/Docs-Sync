@@ -7,7 +7,8 @@
     "validate": "node scripts/validate-projects.js",
     "sync-vercel": "node scripts/sync-vercel.js",
     "deploy-docs": "node scripts/deploy-docs.js",
-    "dns": "node scripts/create-dns-cloudflare.js"
+    "dns": "node scripts/create-dns-cloudflare.js",
+    "cron-check-data": "node scripts/cron-check-data.js"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
