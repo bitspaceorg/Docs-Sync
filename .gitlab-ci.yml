@@ -17,6 +17,8 @@ sync-vercel:
   rules:
     - if: $CI_PIPELINE_SOURCE == "trigger"
       when: never
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - config.yaml
@@ -38,6 +40,8 @@ deploy-docs:
   rules:
     - if: $CI_PIPELINE_SOURCE == "trigger" && $DOCS_SHA != null && $DOCS_SHA != ""
       when: always
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - config.yaml
@@ -52,6 +56,8 @@ dns:cloudflare:
     - npm run dns
   rules:
     - if: $CI_PIPELINE_SOURCE == "trigger"
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "schedule"
       when: never
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
