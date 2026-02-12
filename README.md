@@ -20,7 +20,18 @@ One docs repo → many Vercel projects (one per `projects/*.yaml`). This repo de
 
 ## Cron: rebuild when DATA_URL timestamp changes
 
-**Global cron:** The **cron:check-data** job (runs on schedule) checks all projects with `DOCS_DEPLOYMENT_MANAGED`, fetches each `DATA_URL`, and triggers a rebuild **only for the project(s)** whose `timestamp` is newer than last run (via Vercel API, latest docs ref/sha from `config.docsRepo`). **Only DOCS_VERCEL_TOKEN required.** Every minute: CI/CD → Schedules → Cron `* * * * *`, branch `main`. Optional: **CRON_TIMESTAMP_FIELD**, **CRON_TIMESTAMPS_FILE**. **GitLab Pages** publishes a status page with last rebuilt per project; see Deployments → Pages.
+**Global cron:** The **cron:check-data** job (runs on schedule) checks all projects with `DOCS_DEPLOYMENT_MANAGED`, fetches each `DATA_URL`, and triggers a rebuild **only for the project(s)** whose `timestamp` is newer than last run (via Vercel API, latest docs ref/sha from `config.docsRepo`). **Only DOCS_VERCEL_TOKEN required.** **GitLab Pages** publishes a status page (last rebuilt per project, and projects not rebuilding with reasons); see Deployments → Pages.
+
+**Set up the schedule (required for cron to run):**
+
+1. In this project go to **CI/CD → Schedules**.
+2. Click **Create a new pipeline schedule**.
+3. **Description:** e.g. `Check data and rebuild`.
+4. **Interval pattern:** choose **Custom** and enter cron `* * * * *` (every minute) or `*/5 * * * *` (every 5 minutes).
+5. **Target branch:** `main`.
+6. Save and ensure the schedule is enabled.
+
+After that, pipelines will run on the schedule; the **cron:check-data** job runs only when the pipeline source is **Schedule** (see CI/CD → Pipelines). Optional env: **CRON_TIMESTAMP_FIELD**, **CRON_TIMESTAMPS_FILE**.
 
 ## CI jobs
 

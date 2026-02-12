@@ -53,8 +53,9 @@ const entries = Object.entries(data)
 
 const rows =
   entries.length === 0
-    ? "<p>No rebuilds recorded yet. Run a scheduled pipeline (cron:check-data) to see last rebuilt times.</p>"
+    ? "<p>No rebuild triggered.</p>"
     : `
+  <h2>Last rebuilt</h2>
   <table>
     <thead><tr><th>Project</th><th>Domain</th><th>Last rebuilt</th></tr></thead>
     <tbody>
@@ -105,8 +106,7 @@ const html = `<!DOCTYPE html>
   </style>
 </head>
 <body>
-  <h1>Docs Sync – last rebuilt</h1>
-  <p>Per-project last rebuild time (from cron:check-data). Schedule: <code>* * * * *</code> on main.</p>
+  <h1>Docs Sync – status</h1>
   ${rows}
   ${skipSection}
 </body>
