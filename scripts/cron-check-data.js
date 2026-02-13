@@ -162,7 +162,7 @@ async function getLatestDocsRefSha(config) {
 async function createDeployment(token, teamId, projectName, gitSource) {
   return await api(
     "POST",
-    "/v13/deployments?skipAutoDetectionConfirmation=1",
+    "/v13/deployments?skipAutoDetectionConfirmation=1&forceNew=1",
     {
       name: projectName,
       project: projectName,
