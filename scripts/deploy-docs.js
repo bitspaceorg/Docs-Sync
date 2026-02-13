@@ -79,6 +79,16 @@ async function createDeployment(token, teamId, projectName, gitSource) {
   );
 }
 
+async function purgeEdgeCache(token, teamId, projectName) {
+  try {
+    // Purge edge cache for the project domain to ensure fresh content is served
+    await api("POST", "/v1/edge-cache/invalidate-by-tags", { tags: [projectName] }, token, teamId);
+    console.log(`    → purged edge cache`);
+  } catch (e) {
+    console.warn(`    → edge cache purge failed (non-fatal): ${e.message}`);
+  }
+}
+
 async function main() {
   const token = process.env.DOCS_VERCEL_API_TOKEN || process.env.DOCS_VERCEL_TOKEN || process.env.VERCEL_API_TOKEN || process.env.VERCEL_TOKEN;
   if (!token) {
@@ -112,6 +122,7 @@ async function main() {
     console.log(`  Deploying ${id}...`);
     const d = await createDeployment(token, teamId, id, gitSource);
     console.log(`    → ${d.url || d.id}`);
+    await purgeEdgeCache(token, teamId, id);
   }
 
   console.log("Done.");

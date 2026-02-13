@@ -44,6 +44,7 @@ function loadProjects(config) {
       NEXT_PUBLIC_DATA_URL: data.data_url ?? "",
       DOCS_DEPLOYMENT_MANAGED: "1",
       DOCS_DEPLOYMENT_FULL_DOMAIN: fullDomain,
+      VERCEL_FORCE_NO_BUILD_CACHE: "1",
       ...(data.project_env || {}),
     };
     out.push({ id, file, name: data.project_name ?? id, fullDomain, env });

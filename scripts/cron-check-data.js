@@ -179,6 +179,17 @@ async function createDeployment(token, teamId, projectName, gitSource) {
   );
 }
 
+async function purgeEdgeCache(token, teamId, projectName) {
+  try {
+    // Purge edge cache for the project domain to ensure fresh content is served
+    // Note: This purges CDN cache, not build cache (which can't be disabled via API)
+    await api("POST", "/v1/edge-cache/invalidate-by-tags", { tags: [projectName] }, token, teamId);
+    console.log(`  ${projectName}: purged edge cache.`);
+  } catch (e) {
+    console.warn(`  ${projectName}: edge cache purge failed (non-fatal): ${e.message}`);
+  }
+}
+
 async function main() {
   const token = process.env.DOCS_VERCEL_API_TOKEN || process.env.DOCS_VERCEL_TOKEN || process.env.VERCEL_API_TOKEN || process.env.VERCEL_TOKEN;
   if (!token) {
@@ -239,6 +250,8 @@ async function main() {
       if (gitSource) {
         try {
           await createDeployment(token, teamId, proj.id, gitSource);
+          // Purge edge cache to ensure fresh content is served (build cache can't be disabled via API)
+          await purgeEdgeCache(token, teamId, proj.id);
           lastDeployed[proj.id] = { at: new Date().toISOString(), domain: proj.fullDomain || "" };
           console.log(`  ${proj.id}: deployed (timestamp changed).`);
           deployed++;
