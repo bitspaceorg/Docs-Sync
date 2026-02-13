@@ -35,38 +35,12 @@ function escape(s) {
     .replace(/"/g, "&quot;");
 }
 
-let data = {};
+let lastDeployed = {};
 try {
-  data = JSON.parse(fs.readFileSync(CACHE_FILE, "utf8"));
+  lastDeployed = JSON.parse(fs.readFileSync(CACHE_FILE, "utf8"));
 } catch {
   // no cache yet
 }
-
-const entries = Object.entries(data)
-  .map(([name, v]) => ({
-    name,
-    at: typeof v === "string" ? v : v?.at,
-    domain: typeof v === "object" && v != null ? v.domain : "",
-  }))
-  .filter((e) => e.at)
-  .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
-
-const rows =
-  entries.length === 0
-    ? "<p>No rebuild triggered.</p>"
-    : `
-  <h2>Last rebuilt</h2>
-  <table>
-    <thead><tr><th>Project</th><th>Domain</th><th>Last rebuilt</th></tr></thead>
-    <tbody>
-      ${entries
-        .map(
-          (e) =>
-            `<tr><td><code>${escape(e.name)}</code></td><td>${e.domain ? `<code>${escape(e.domain)}</code>` : "—"}</td><td>${escape(ago(e.at))}</td></tr>`
-        )
-        .join("")}
-    </tbody>
-  </table>`;
 
 let skipReasons = {};
 try {
@@ -74,28 +48,64 @@ try {
 } catch {
   // none
 }
-const skipEntries = Object.entries(skipReasons).filter(([, r]) => r);
-const skipSection =
-  skipEntries.length === 0
-    ? ""
-    : `
-  <h2>Projects not rebuilding</h2>
-  <p>For these projects, rebuild will not run until the issue is fixed:</p>
-  <table>
-    <thead><tr><th>Project</th><th>Reason</th></tr></thead>
-    <tbody>
-      ${skipEntries
-        .map(([name, reason]) => `<tr><td><code>${escape(name)}</code></td><td>${escape(reason)}</td></tr>`)
-        .join("")}
-    </tbody>
-  </table>`;
+
+// Merge all projects from both sources
+const allProjects = new Set([
+  ...Object.keys(lastDeployed),
+  ...Object.keys(skipReasons),
+]);
+
+if (allProjects.size === 0) {
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Docs Sync – status</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 48rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <h1>Docs Sync – status</h1>
+  <p>No rebuild triggered.</p>
+</body>
+</html>
+`;
+  const outDir = path.dirname(OUT_FILE);
+  if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
+  fs.writeFileSync(OUT_FILE, html, "utf8");
+  console.log("Wrote public/index.html");
+  process.exit(0);
+}
+
+// Build unified table rows
+const rows = Array.from(allProjects)
+  .map((name) => {
+    const deployed = lastDeployed[name];
+    const skipReason = skipReasons[name];
+    const domain = deployed && typeof deployed === "object" && deployed != null ? deployed.domain : "";
+    const deployedAt = typeof deployed === "string" ? deployed : deployed?.at;
+    
+    let status;
+    if (skipReason) {
+      status = escape(skipReason);
+    } else if (deployedAt) {
+      status = `Last rebuilt: ${escape(ago(deployedAt))}`;
+    } else {
+      status = "Last rebuilt: never";
+    }
+    
+    return `<tr><td><code>${escape(name)}</code></td><td>${domain ? `<code>${escape(domain)}</code>` : "—"}</td><td>${status}</td></tr>`;
+  })
+  .join("");
 
 const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Docs deployment – last rebuilt</title>
+  <title>Docs Sync – status</title>
   <style>
     body { font-family: system-ui, sans-serif; max-width: 48rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
     code { background: #f0f0f0; padding: 0.2em 0.4em; border-radius: 3px; }
@@ -107,8 +117,13 @@ const html = `<!DOCTYPE html>
 </head>
 <body>
   <h1>Docs Sync – status</h1>
-  ${rows}
-  ${skipSection}
+  <p>Per-project rebuild status.</p>
+  <table>
+    <thead><tr><th>Project</th><th>Domain</th><th>Status</th></tr></thead>
+    <tbody>
+      ${rows}
+    </tbody>
+  </table>
 </body>
 </html>
 `;
