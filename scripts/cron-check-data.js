@@ -27,6 +27,26 @@ function loadConfig() {
   return parse(raw);
 }
 
+function loadProjects(config) {
+  const projectsDir = path.join(ROOT, "projects");
+  const files = fs.readdirSync(projectsDir).filter((f) => f.endsWith(".yaml") && !f.startsWith("_"));
+  const out = [];
+  for (const file of files) {
+    const id = path.basename(file, ".yaml");
+    const raw = fs.readFileSync(path.join(projectsDir, file), "utf8");
+    const data = parse(raw);
+    const subdomain = data.project_subdomain ?? id;
+    const fullDomain = `${subdomain}.${config.baseDomain}`;
+    out.push({
+      id,
+      name: data.project_name ?? id,
+      fullDomain,
+      dataUrl: data.data_url ?? "",
+    });
+  }
+  return out;
+}
+
 function loadTimestamps() {
   try {
     const data = fs.readFileSync(TIMESTAMPS_FILE, "utf8");
@@ -176,8 +196,8 @@ async function main() {
     if (gitSource) gitSource.projectId = docsRepo.projectId;
   }
 
-  const projects = await listVercelProjects(token, teamId);
-  console.log(`Found ${projects.length} Vercel project(s).`);
+  const projects = loadProjects(config);
+  console.log(`Found ${projects.length} managed project(s) from projects/*.yaml.`);
   const timestamps = loadTimestamps();
   const lastDeployed = loadLastDeployed();
   const skipReasons = {};
@@ -185,17 +205,9 @@ async function main() {
   let deployed = 0;
   let checked = 0;
   for (const proj of projects) {
-    const envList = await getProjectEnv(token, teamId, proj.name);
-    const env = envMap(envList);
-    if (env.DOCS_DEPLOYMENT_MANAGED !== "1" && env.DOCS_DEPLOYMENT_MANAGED !== "true") {
-      console.log(`  ${proj.name}: skipping (DOCS_DEPLOYMENT_MANAGED not set).`);
-      continue;
-    }
-    checked++;
-    console.log(`  ${proj.name}: checking...`);
-    const dataUrl = env.DATA_URL;
+    const dataUrl = proj.dataUrl;
     if (!dataUrl) {
-      skipReasons[proj.name] = "DATA_URL not set; rebuild will not run.";
+      skipReasons[proj.id] = `DATA_URL not set in projects/${proj.id}.yaml; rebuild will not run.`;
       continue;
     }
 
@@ -205,37 +217,39 @@ async function main() {
       if (!res.ok) throw new Error(`${res.status}`);
       payload = await res.json();
     } catch (e) {
-      skipReasons[proj.name] = `Failed to fetch DATA_URL: ${e.message}. Rebuild will not run.`;
-      console.warn(`  ${proj.name}: fetch DATA_URL failed: ${e.message}`);
+      skipReasons[proj.id] = `Failed to fetch DATA_URL: ${e.message}. Rebuild will not run.`;
+      console.warn(`  ${proj.id}: fetch DATA_URL failed: ${e.message}`);
       continue;
     }
 
     const raw = payload[TIMESTAMP_FIELD];
     const currentMs = toMs(raw);
     if (currentMs == null) {
-      skipReasons[proj.name] = `Timestamp missing or invalid in DATA_URL response (field "${TIMESTAMP_FIELD}"). Rebuild will not run.`;
-      console.warn(`  ${proj.name}: missing or invalid "${TIMESTAMP_FIELD}"`);
+      skipReasons[proj.id] = `Timestamp missing or invalid in DATA_URL response (field "${TIMESTAMP_FIELD}"). Rebuild will not run.`;
+      console.warn(`  ${proj.id}: missing or invalid "${TIMESTAMP_FIELD}"`);
       continue;
     }
 
-    const key = proj.name;
+    checked++;
+    const key = proj.id;
     const lastMs = timestamps[key] != null ? Number(timestamps[key]) : null;
     const shouldDeploy = lastMs == null || currentMs > lastMs;
 
     if (shouldDeploy) {
       if (gitSource) {
         try {
-          await createDeployment(token, teamId, proj.name, gitSource);
-          lastDeployed[proj.name] = { at: new Date().toISOString(), domain: env.DOCS_DEPLOYMENT_FULL_DOMAIN || "" };
-          console.log(`  ${proj.name}: deployed (timestamp changed).`);
+          await createDeployment(token, teamId, proj.id, gitSource);
+          lastDeployed[proj.id] = { at: new Date().toISOString(), domain: proj.fullDomain || "" };
+          console.log(`  ${proj.id}: deployed (timestamp changed).`);
           deployed++;
         } catch (e) {
-          console.warn(`  ${proj.name}: deploy failed: ${e.message}`);
+          skipReasons[proj.id] = `Deploy failed via Vercel API: ${e.message}`;
+          console.warn(`  ${proj.id}: deploy failed: ${e.message}`);
           continue;
         }
       } else {
-        skipReasons[proj.name] = "No docsRepo in config; rebuild will not run.";
-        console.warn(`  ${proj.name}: no docsRepo in config; skip deploy.`);
+        skipReasons[proj.id] = "No docsRepo in config; rebuild will not run.";
+        console.warn(`  ${proj.id}: no docsRepo in config; skip deploy.`);
         timestamps[key] = currentMs;
         continue;
       }
