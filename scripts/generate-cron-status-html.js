@@ -88,7 +88,7 @@ if (allProjects.size === 0) {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Docs Sync</title>
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 48rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+    body { font-family: system-ui, sans-serif; max-width: 64rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
   </style>
 </head>
 <body>
@@ -117,18 +117,23 @@ const rows = Array.from(allProjects)
       domain = domainMap[name];
     }
     const deployedAt = typeof deployed === "string" ? deployed : deployed?.at;
-    
-    let status;
+    const lastTried = (typeof skipReason === "object" ? skipReason?.lastTried : null)
+      || (typeof deployed === "object" ? deployed?.lastTried : null);
+
+    const domainCell = domain ? `<a href="https://${escape(domain)}" target="_blank"><code>${escape(domain)}</code></a>` : "—";
+    const rebuiltCell = deployedAt ? escape(ago(deployedAt)) : "—";
+    const triedCell = lastTried ? escape(ago(lastTried)) : "—";
+
+    let reasonCell;
     if (skipReason) {
-      // Handle both string and object format for skip reasons
-      status = typeof skipReason === "string" ? skipReason : skipReason.reason || "";
+      reasonCell = escape(typeof skipReason === "string" ? skipReason : skipReason.reason || "");
     } else if (deployedAt) {
-      status = `Last rebuilt: ${escape(ago(deployedAt))}`;
+      reasonCell = "OK";
     } else {
-      status = "Last rebuilt: never";
+      reasonCell = "Awaiting first cron check";
     }
-    
-    return `<tr><td><code>${escape(name)}</code></td><td>${domain ? `<a href="https://${escape(domain)}" target="_blank"><code>${escape(domain)}</code></a>` : "—"}</td><td>${escape(status)}</td></tr>`;
+
+    return `<tr><td><code>${escape(name)}</code></td><td>${domainCell}</td><td>${rebuiltCell}</td><td>${triedCell}</td><td>${reasonCell}</td></tr>`;
   })
   .join("");
 
@@ -139,7 +144,7 @@ const html = `<!DOCTYPE html>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Docs Sync</title>
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 48rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+    body { font-family: system-ui, sans-serif; max-width: 64rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
     code { background: #f0f0f0; padding: 0.2em 0.4em; border-radius: 3px; }
     table { width: 100%; border-collapse: collapse; }
     th, td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid #eee; }
@@ -153,7 +158,7 @@ const html = `<!DOCTYPE html>
   <h1>Docs Sync</h1>
   <p>Per-project rebuild status.</p>
   <table>
-    <thead><tr><th>Project</th><th>Domain</th><th>Status</th></tr></thead>
+    <thead><tr><th>Project</th><th>Domain</th><th>Last Rebuilt</th><th>Last Tried</th><th>Reason</th></tr></thead>
     <tbody>
       ${rows}
     </tbody>

@@ -217,8 +217,9 @@ async function main() {
   let checked = 0;
   for (const proj of projects) {
     const dataUrl = proj.dataUrl;
+    const now = new Date().toISOString();
     if (!dataUrl) {
-      skipReasons[proj.id] = `DATA_URL not set in projects/${proj.id}.yaml; rebuild will not run.`;
+      skipReasons[proj.id] = { reason: `DATA_URL not set in projects/${proj.id}.yaml; rebuild will not run.`, lastTried: now };
       continue;
     }
 
@@ -228,7 +229,7 @@ async function main() {
       if (!res.ok) throw new Error(`${res.status}`);
       payload = await res.json();
     } catch (e) {
-      skipReasons[proj.id] = `Failed to fetch DATA_URL: ${e.message}. Rebuild will not run.`;
+      skipReasons[proj.id] = { reason: `Failed to fetch DATA_URL: ${e.message}. Rebuild will not run.`, lastTried: now };
       console.warn(`  ${proj.id}: fetch DATA_URL failed: ${e.message}`);
       continue;
     }
@@ -236,7 +237,7 @@ async function main() {
     const raw = payload[TIMESTAMP_FIELD];
     const currentMs = toMs(raw);
     if (currentMs == null) {
-      skipReasons[proj.id] = `Timestamp missing or invalid in DATA_URL response (field "${TIMESTAMP_FIELD}"). Rebuild will not run.`;
+      skipReasons[proj.id] = { reason: `Timestamp missing or invalid in DATA_URL response (field "${TIMESTAMP_FIELD}"). Rebuild will not run.`, lastTried: now };
       console.warn(`  ${proj.id}: missing or invalid "${TIMESTAMP_FIELD}"`);
       continue;
     }
@@ -246,22 +247,27 @@ async function main() {
     const lastMs = timestamps[key] != null ? Number(timestamps[key]) : null;
     const shouldDeploy = lastMs == null || currentMs > lastMs;
 
+    // Always update lastTried when cron checks successfully
+    if (lastDeployed[proj.id]) {
+      lastDeployed[proj.id].lastTried = now;
+    }
+
     if (shouldDeploy) {
       if (gitSource) {
         try {
           await createDeployment(token, teamId, proj.id, gitSource);
           // Purge edge cache to ensure fresh content is served (build cache can't be disabled via API)
           await purgeEdgeCache(token, teamId, proj.id);
-          lastDeployed[proj.id] = { at: new Date().toISOString(), domain: proj.fullDomain || "" };
+          lastDeployed[proj.id] = { at: new Date().toISOString(), lastTried: now, domain: proj.fullDomain || "" };
           console.log(`  ${proj.id}: deployed (timestamp changed).`);
           deployed++;
         } catch (e) {
-          skipReasons[proj.id] = `Deploy failed via Vercel API: ${e.message}`;
+          skipReasons[proj.id] = { reason: `Deploy failed via Vercel API: ${e.message}`, lastTried: now };
           console.warn(`  ${proj.id}: deploy failed: ${e.message}`);
           continue;
         }
       } else {
-        skipReasons[proj.id] = "No docsRepo in config; rebuild will not run.";
+        skipReasons[proj.id] = { reason: "No docsRepo in config; rebuild will not run.", lastTried: now };
         console.warn(`  ${proj.id}: no docsRepo in config; skip deploy.`);
         timestamps[key] = currentMs;
         continue;
