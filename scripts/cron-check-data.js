@@ -96,7 +96,8 @@ async function listVercelProjects(token, teamId) {
 
 async function getProjectEnv(token, teamId, idOrName) {
   try {
-    const data = await api("GET", `/v10/projects/${encodeURIComponent(idOrName)}/env`, null, token, teamId);
+    // Vercel does not return plaintext env values unless decrypt=true is provided.
+    const data = await api("GET", `/v10/projects/${encodeURIComponent(idOrName)}/env?decrypt=true`, null, token, teamId);
     const list = Array.isArray(data) ? data : data?.env ?? [];
     return list;
   } catch (e) {
