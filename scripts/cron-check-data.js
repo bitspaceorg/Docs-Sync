@@ -176,15 +176,22 @@ async function main() {
   }
 
   const projects = await listVercelProjects(token, teamId);
+  console.log(`Found ${projects.length} Vercel project(s).`);
   const timestamps = loadTimestamps();
   const lastDeployed = loadLastDeployed();
   const skipReasons = {};
 
   let deployed = 0;
+  let checked = 0;
   for (const proj of projects) {
     const envList = await getProjectEnv(token, teamId, proj.name);
     const env = envMap(envList);
-    if (env.DOCS_DEPLOYMENT_MANAGED !== "1" && env.DOCS_DEPLOYMENT_MANAGED !== "true") continue;
+    if (env.DOCS_DEPLOYMENT_MANAGED !== "1" && env.DOCS_DEPLOYMENT_MANAGED !== "true") {
+      console.log(`  ${proj.name}: skipping (DOCS_DEPLOYMENT_MANAGED not set).`);
+      continue;
+    }
+    checked++;
+    console.log(`  ${proj.name}: checking...`);
     const dataUrl = env.DATA_URL;
     if (!dataUrl) {
       skipReasons[proj.name] = "DATA_URL not set; rebuild will not run.";
@@ -239,7 +246,7 @@ async function main() {
   saveTimestamps(timestamps);
   saveLastDeployed(lastDeployed);
   saveSkipReasons(skipReasons);
-  console.log(`Done. Deployed ${deployed} project(s).`);
+  console.log(`Done. Checked ${checked} project(s), deployed ${deployed} project(s).`);
 }
 
 main().catch((err) => {
