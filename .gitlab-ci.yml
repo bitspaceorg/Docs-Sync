@@ -28,6 +28,10 @@ sync-vercel:
 
 deploy-docs:
   stage: deploy
+  cache:
+    key: cron-timestamps
+    paths:
+      - .cache/
   before_script:
     - npm ci
   script:
@@ -85,19 +89,23 @@ cron:check-data:
       when: on_success
     - when: never
 
-# GitLab Pages: last-rebuilt status (when schedule ran) or repo public/.
+# GitLab Pages: last-rebuilt status (only updates when schedule runs, preserving status between normal pipelines).
 pages:
   stage: .post
   before_script:
     - npm ci
   script:
     - |
-      if [ -f .cache/cron-last-deployed.json ]; then
+      if [ -f .cache/cron-last-deployed.json ] || [ -f .cache/cron-skip-reasons.json ]; then
         node scripts/generate-cron-status-html.js
+      else
+        echo "No cache files found; skipping Pages update to preserve existing status."
+        exit 0
       fi
   artifacts:
     paths:
       - public
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: on_success
+    - when: never

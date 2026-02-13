@@ -73,8 +73,9 @@ try {
   // none
 }
 
-// Merge all projects from both sources
+// Merge all projects from yaml files, cache, and skip reasons
 const allProjects = new Set([
+  ...Object.keys(domainMap),
   ...Object.keys(lastDeployed),
   ...Object.keys(skipReasons),
 ]);

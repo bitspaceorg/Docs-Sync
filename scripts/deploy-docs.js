@@ -12,6 +12,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 
 const VERCEL_API = "https://api.vercel.com";
+const LAST_DEPLOYED_FILE = path.join(ROOT, ".cache", "cron-last-deployed.json");
 
 function loadConfig() {
   const raw = fs.readFileSync(path.join(ROOT, "config.yaml"), "utf8");
@@ -22,6 +23,34 @@ function loadProjectIds(config) {
   const projectsDir = path.join(ROOT, "projects");
   const files = fs.readdirSync(projectsDir).filter((f) => f.endsWith(".yaml") && !f.startsWith("_"));
   return files.map((f) => path.basename(f, ".yaml"));
+}
+
+function loadProjectMeta(config) {
+  const projectsDir = path.join(ROOT, "projects");
+  const files = fs.readdirSync(projectsDir).filter((f) => f.endsWith(".yaml") && !f.startsWith("_"));
+  const out = {};
+  for (const file of files) {
+    const id = path.basename(file, ".yaml");
+    const raw = fs.readFileSync(path.join(projectsDir, file), "utf8");
+    const data = parse(raw);
+    const subdomain = data.project_subdomain ?? id;
+    out[id] = { fullDomain: `${subdomain}.${config.baseDomain}` };
+  }
+  return out;
+}
+
+function loadLastDeployed() {
+  try {
+    return JSON.parse(fs.readFileSync(LAST_DEPLOYED_FILE, "utf8"));
+  } catch {
+    return {};
+  }
+}
+
+function saveLastDeployed(obj) {
+  const dir = path.dirname(LAST_DEPLOYED_FILE);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(LAST_DEPLOYED_FILE, JSON.stringify(obj, null, 2) + "\n", "utf8");
 }
 
 async function api(method, pathname, body, token, teamId) {
@@ -113,6 +142,8 @@ async function main() {
 
   const teamId = process.env.DOCS_VERCEL_TEAM_ID || process.env.VERCEL_TEAM_ID || config.vercel?.teamId;
   const projectIds = loadProjectIds(config);
+  const projectMeta = loadProjectMeta(config);
+  const lastDeployed = loadLastDeployed();
 
   console.log(`Deploying docs repo (ref=${ref}, sha=${sha.slice(0, 7)}) to ${projectIds.length} project(s)...`);
 
@@ -123,8 +154,10 @@ async function main() {
     const d = await createDeployment(token, teamId, id, gitSource);
     console.log(`    → ${d.url || d.id}`);
     await purgeEdgeCache(token, teamId, id);
+    lastDeployed[id] = { at: new Date().toISOString(), domain: projectMeta[id]?.fullDomain || "" };
   }
 
+  saveLastDeployed(lastDeployed);
   console.log("Done.");
 }
 
