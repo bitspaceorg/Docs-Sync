@@ -121,19 +121,19 @@ const rows = Array.from(allProjects)
       || (typeof deployed === "object" ? deployed?.lastTried : null);
 
     const domainCell = domain ? `<a href="https://${escape(domain)}" target="_blank"><code>${escape(domain)}</code></a>` : "—";
-    const rebuiltCell = deployedAt ? escape(ago(deployedAt)) : "—";
-    const triedCell = lastTried ? escape(ago(lastTried)) : "—";
+    const rebuiltCell = deployedAt ? `<time data-ts="${escape(deployedAt)}">${escape(ago(deployedAt))}</time>` : "—";
+    const triedCell = lastTried ? `<time data-ts="${escape(lastTried)}">${escape(ago(lastTried))}</time>` : "—";
 
-    let reasonCell;
+    let statusCell;
     if (skipReason) {
-      reasonCell = escape(typeof skipReason === "string" ? skipReason : skipReason.reason || "");
+      statusCell = escape(typeof skipReason === "string" ? skipReason : skipReason.reason || "");
     } else if (deployedAt) {
-      reasonCell = "OK";
+      statusCell = "OK";
     } else {
-      reasonCell = "Awaiting first cron check";
+      statusCell = "Awaiting first cron check";
     }
 
-    return `<tr><td><code>${escape(name)}</code></td><td>${domainCell}</td><td>${rebuiltCell}</td><td>${triedCell}</td><td>${reasonCell}</td></tr>`;
+    return `<tr><td><code>${escape(name)}</code></td><td>${domainCell}</td><td>${rebuiltCell}</td><td>${triedCell}</td><td>${statusCell}</td></tr>`;
   })
   .join("");
 
@@ -144,10 +144,11 @@ const html = `<!DOCTYPE html>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Docs Sync</title>
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 64rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+    body { font-family: system-ui, sans-serif; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
     code { background: #f0f0f0; padding: 0.2em 0.4em; border-radius: 3px; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid #eee; }
+    table { width: 100%; border-collapse: collapse; table-layout: auto; }
+    th, td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid #eee; white-space: nowrap; }
+    td:last-child { white-space: normal; }
     th { font-weight: 600; }
     h1 { font-size: 1.25rem; }
     a { color: inherit; text-decoration: none; }
@@ -158,11 +159,32 @@ const html = `<!DOCTYPE html>
   <h1>Docs Sync</h1>
   <p>Per-project rebuild status.</p>
   <table>
-    <thead><tr><th>Project</th><th>Domain</th><th>Last Rebuilt</th><th>Last Tried</th><th>Reason</th></tr></thead>
+    <thead><tr><th>Project</th><th>Domain</th><th>Last Rebuilt</th><th>Last Tried</th><th>Status</th></tr></thead>
     <tbody>
       ${rows}
     </tbody>
   </table>
+  <script>
+    function ago(iso) {
+      var ms = Date.now() - new Date(iso).getTime();
+      if (ms < 0) return "just now";
+      var sec = Math.floor(ms / 1000);
+      var min = Math.floor(sec / 60);
+      var hr = Math.floor(min / 60);
+      var day = Math.floor(hr / 24);
+      if (day > 0) return day + " day" + (day === 1 ? "" : "s") + " ago";
+      if (hr > 0) return hr + " hour" + (hr === 1 ? "" : "s") + " ago";
+      if (min > 0) return min + " min ago";
+      return "just now";
+    }
+    function tick() {
+      document.querySelectorAll("time[data-ts]").forEach(function(el) {
+        el.textContent = ago(el.getAttribute("data-ts"));
+      });
+    }
+    tick();
+    setInterval(tick, 30000);
+  </script>
 </body>
 </html>
 `;
