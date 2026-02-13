@@ -89,23 +89,26 @@ cron:check-data:
       when: on_success
     - when: never
 
-# GitLab Pages: last-rebuilt status (only updates when schedule runs, preserving status between normal pipelines).
+# GitLab Pages: last-rebuilt status.
 pages:
   stage: .post
+  cache:
+    key: cron-timestamps
+    paths:
+      - .cache/
+    policy: pull
   before_script:
     - npm ci
   script:
-    - |
-      if [ -f .cache/cron-last-deployed.json ] || [ -f .cache/cron-skip-reasons.json ]; then
-        node scripts/generate-cron-status-html.js
-      else
-        echo "No cache files found; skipping Pages update to preserve existing status."
-        exit 0
-      fi
+    - node scripts/generate-cron-status-html.js
   artifacts:
     paths:
       - public
   rules:
+    - if: $CI_PIPELINE_SOURCE == "trigger"
+      when: never
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: on_success
     - if: $CI_PIPELINE_SOURCE == "schedule"
       when: on_success
     - when: never
