@@ -5,3 +5,6 @@ accent_color: "#CCFF00"
 tinted_accent_color: "#FBFFEB"
 foreground_color: "#0A0A0A"
 data_url: https://zide-docs-b1188a.gitlab.io/data.json
+site_title: "Zide"
+site_description: "Zide Is a Design Environment"
+site_favicon: "https://gitlab.com/uploads/-/system/project/avatar/75928509/zide-docs-102.png"
