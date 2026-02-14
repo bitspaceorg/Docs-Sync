@@ -1,0 +1,10 @@
+project_name: Musikell
+project_subdomain: docs.musikell
+project_home_url: https://gitlab.com/bitspaceorg/claire/musikell
+accent_color: "#ADAFFF"
+tinted_accent_color: "#F7F6FF"
+foreground_color: "#0A0A0A"
+data_url: https://gitlab.com/bitspaceorg/claire/musikell/-/raw/main/docs/data.json
+site_title: "Musikell"
+site_description: "Audio Engine For The Masses"
+site_favicon: "https://iili.io/qHySXLJ.md.png"
