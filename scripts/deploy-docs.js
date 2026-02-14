@@ -154,7 +154,8 @@ async function main() {
     const d = await createDeployment(token, teamId, id, gitSource);
     console.log(`    → ${d.url || d.id}`);
     await purgeEdgeCache(token, teamId, id);
-    lastDeployed[id] = { at: new Date().toISOString(), domain: projectMeta[id]?.fullDomain || "" };
+    const now = new Date().toISOString();
+    lastDeployed[id] = { at: now, lastTried: now, domain: projectMeta[id]?.fullDomain || "" };
   }
 
   saveLastDeployed(lastDeployed);
