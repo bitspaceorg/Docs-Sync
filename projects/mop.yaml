@@ -1,10 +1,10 @@
 project_name: Master of Puppets
 project_subdomain: docs.mop
 project_home_url: https://gitlab.com/bitspaceorg/tools/master-of-puppets
-accent_color: "#722126"
-tinted_accent_color: "#FFD6D9"
+accent_color: "#ffb274"
+tinted_accent_color: "#fdecdf"
 foreground_color: "#0A0A0A"
 data_url: https://gitlab.com/bitspaceorg/tools/master-of-puppets/-/raw/main/docs/data.json
 site_title: "Master of Puppets"
 site_description: "Backend-agnostic viewport rendering engine"
-site_favicon: "https://i.ibb.co/W4HjTS4T/Group-13.png"
+site_favicon: "https://avatars.githubusercontent.com/u/128706614"
