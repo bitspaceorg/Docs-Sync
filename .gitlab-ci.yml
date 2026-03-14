@@ -18,11 +18,13 @@ validate:projects:
       changes:
         - config.yaml
         - "projects/**"
+        - .gitlab-ci.yml
       when: on_success
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
         - config.yaml
         - "projects/**"
+        - .gitlab-ci.yml
       when: on_success
     - when: never
 
