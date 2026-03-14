@@ -1,0 +1,10 @@
+project_name: colossal code
+project_subdomain: docs.cocode
+project_home_url: https://cocode.bitspace.org.in
+accent_color: "#837dd7"
+tinted_accent_color: "#e7e6f6"
+foreground_color: "#12121f"
+data_url: https://gitlab.com/bitspaceorg/ai/colossal-code/-/raw/master/docs/data.json
+site_title: "cocode"
+site_description: "colossal code is an agentic tui for assistive software development"
+site_favicon: "https://gitlab.com/uploads/-/system/project/avatar/80200262/favicon.png?width=96"
