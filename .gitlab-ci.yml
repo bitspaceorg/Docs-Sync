@@ -7,6 +7,27 @@ stages:
 default:
   image: node:20-bookworm
 
+validate:projects:
+  stage: sync
+  before_script:
+    - npm ci
+  script:
+    - npm run validate
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+      changes:
+        - config.yaml
+        - "projects/**"
+        - .gitlab-ci.yml
+      when: on_success
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - config.yaml
+        - "projects/**"
+        - .gitlab-ci.yml
+      when: on_success
+    - when: never
+
 sync-vercel:
   stage: sync
   before_script:
