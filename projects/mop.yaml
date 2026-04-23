@@ -1,10 +1,10 @@
-project_name: Until I Find You
-project_subdomain: docs.uify
-project_home_url: https://gitlab.com/bitspaceorg/tools/until-i-find-you
-accent_color: "#ffa2d1"
-tinted_accent_color: "#ffeef4"
+project_name: Master of Puppets
+project_subdomain: docs.mop
+project_home_url: https://gitlab.com/bitspaceorg/tools/master-of-puppets
+accent_color: "#ffb274"
+tinted_accent_color: "#fdecdf"
 foreground_color: "#0A0A0A"
-data_url: https://gitlab.com/bitspaceorg/tools/until-i-find-you/-/raw/main/docs/data.json
-site_title: "Until I Find You"
-site_description: "Motion tracking engine"
+data_url: https://gitlab.com/bitspaceorg/tools/master-of-puppets/-/raw/main/docs/data.json
+site_title: "Master of Puppets"
+site_description: "Backend-agnostic viewport rendering engine"
 site_favicon: "https://avatars.githubusercontent.com/u/128706614"
