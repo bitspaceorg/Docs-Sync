@@ -1,0 +1,10 @@
+project_name: Until I Find You
+project_subdomain: docs.uify
+project_home_url: https://gitlab.com/bitspaceorg/tools/until-i-find-you
+accent_color: "#ffa2d1"
+tinted_accent_color: "#ffeef4"
+foreground_color: "#0A0A0A"
+data_url: https://gitlab.com/bitspaceorg/tools/until-i-find-you/-/raw/main/docs/data.json
+site_title: "Until I Find You"
+site_description: "Motion tracking engine"
+site_favicon: "https://avatars.githubusercontent.com/u/128706614"
